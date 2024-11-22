@@ -343,7 +343,8 @@ class CommonSettings extends ResourceController
                         'password' => base64_decode(base64_decode(base64_decode($keydetails['yeastar_pass'])))
                     ];
 
-                    $url = 'https://almaragy.ras.yeastar.com/openapi/v1.0/get_token';
+                    // $url = 'https://almaragy.ras.yeastar.com/openapi/v1.0/get_token';
+                    $url = 'https://almaraghidxb.ras.yeastar.com/openapi/v1.0/get_token';
                     $ch = curl_init($url);
                     $headers = [
                         'Content-Type: text/plain',
@@ -371,7 +372,8 @@ class CommonSettings extends ResourceController
                     $postData = [
                         'refresh_token' => base64_decode(base64_decode(base64_decode($keydetails['yeastar_refresh_token']))),
                     ];
-                    $url = 'https://almaragy.ras.yeastar.com/openapi/v1.0/refresh_token';
+                    // $url = 'https://almaragy.ras.yeastar.com/openapi/v1.0/refresh_token';
+                    $url = 'https://almaraghidxb.ras.yeastar.com/openapi/v1.0/refresh_token';
                     $ch = curl_init($url);
                     $headers = [
                         'Content-Type: text/plain',
@@ -1019,19 +1021,19 @@ class CommonSettings extends ResourceController
 
         $curlResponse = json_decode(curl_exec($ch));
         curl_close($ch);
-
+        
         if ($curlResponse && sizeof($curlResponse) > 0) {
             $response = [
                 'ret_data' => 'success',
-                'job_data' => $curlResponse
+                'job_data'=> $curlResponse
             ];
         } else {
             $response = [
                 'ret_data' => 'success',
-                'job_data' => []
+                'job_data'=>[]
             ];
         }
-        return $this->respond($response, 200);
+        return $this->respond( $response, 200);
     }
 
     public function updatePartsMargin()
@@ -1225,7 +1227,7 @@ class CommonSettings extends ResourceController
             if ($checkStatus == true) {
                 $builder = $this->db->table('alm_spare_invoice_master');
                 $builder->select('inv_id, inv_nm_id, inv_nm_supplier_id, inv_nm_description, inv_customer_id, inv_vehicle_id, inv_jobcard_no,
-                inv_nm_status, inv_nm_type, inv_nm_purchase_type, inv_nm_branch, inv_nm_sub_total, inv_nm_vat_total,inv_nm_return_total,
+                inv_nm_status, inv_nm_type, inv_nm_purchase_type, inv_nm_branch, inv_nm_sub_total, inv_nm_vat_total,
                 inv_nm_discount, inv_nm_inv_date, inv_alm_margin_total, inv_alm_discount, inv_created_by, inv_created_on,
                 inv_updated_by, inv_updated_on, cvl.vehicle_id as veh_data_vehicle_id, model_name, reg_no, chassis_no,
                 job_no, car_reg_no, cjl.vehicle_id as job_vehicle_id, cjl.user_name as job_user_name, job_open_date,
@@ -1261,7 +1263,7 @@ class CommonSettings extends ResourceController
             } else {
                 $builder = $this->db->table('alm_spare_invoice_master');
                 $builder->select('inv_id, inv_nm_id, inv_nm_supplier_id, inv_nm_description, inv_customer_id, inv_vehicle_id, inv_jobcard_no,
-                inv_nm_status, inv_nm_type, inv_nm_purchase_type, inv_nm_branch, inv_nm_sub_total, inv_nm_vat_total,inv_nm_return_total,
+                inv_nm_status, inv_nm_type, inv_nm_purchase_type, inv_nm_branch, inv_nm_sub_total, inv_nm_vat_total,
                 inv_nm_discount, inv_nm_inv_date, inv_alm_margin_total, inv_alm_discount, inv_created_by, inv_created_on,
                 inv_updated_by, inv_updated_on, cvl.vehicle_id as veh_data_vehicle_id, model_name, reg_no, chassis_no,
                 job_no, car_reg_no, cjl.vehicle_id as job_vehicle_id, cjl.user_name as job_user_name, job_open_date,
@@ -2626,12 +2628,8 @@ class CommonSettings extends ResourceController
             $invItems = new PartsInvoiceItems();
             $invLog = new PartsInvoiceLog();
 
-            $inv_id = $this->request->getVar('inv_id');
-
             $masterdata = [
                 'inv_alm_margin_total' => $this->request->getVar('inv_alm_margin_total'),
-                'inv_nm_sub_total' => $this->request->getVar('inv_nm_sub_total'),
-                'inv_nm_vat_total' => $this->request->getVar('inv_nm_vat_total'),
                 'inv_alm_discount' => $this->request->getVar('inv_alm_discount'),
                 'inv_updated_by' => $tokendata['uid'],
                 'inv_updated_on' => date("Y-m-d H:i:s"),
@@ -2643,35 +2641,16 @@ class CommonSettings extends ResourceController
                 $updatedata = $this->request->getVar('invoice_items');
                 if (sizeof($updatedata) > 0) {
                     $updatearray_data = array();
-                    $insdata = array();
                     foreach ($updatedata as $eachdata) {
-                        if ($eachdata->inv_item_id != '0') {
-                            $update_data = [
-                                'inv_item_id' => $eachdata->inv_item_id,
-                                'inv_item_return_qty' => $eachdata->inv_item_return_qty,
-                                'inv_item_margin' => $eachdata->inv_item_margin,
-                                'inv_item_margin_amount' => $eachdata->inv_item_margin_amount,
-                                'inv_item_delete_flag' => $eachdata->inv_item_delete_flag,
-                            ];
-                            array_push($updatearray_data, $update_data);
-                        } else {
-                            $insdata[] = array(
-                                'inv_item_part_number' => $eachdata->inv_item_part_number,
-                                'inv_item_master' => $inv_id,
-                                'inv_item_qty' => $eachdata->inv_item_qty,
-                                'inv_item_nm_unit_price' => $eachdata->inv_item_nm_unit_price,
-                                'inv_item_nm_vat' => $eachdata->inv_item_nm_vat,
-                                'inv_item_description' => $eachdata->inv_item_description,
-                                'inv_item_nm_discount' => $eachdata->inv_item_nm_discount,
-                                'inv_item_margin' => $eachdata->inv_item_margin,
-                                'inv_item_margin_amount' => $eachdata->inv_item_margin_amount,
-                                'inv_old_item_margin' => $eachdata->inv_item_margin,
-                                'inv_old_item_margin_amount' => $eachdata->inv_item_margin_amount,
-                            );
-                        }
+                        $update_data = [
+                            'inv_item_id' => $eachdata->inv_item_id,
+                            'inv_item_return_qty' => $eachdata->ITEM_QTY_RETURN,
+                            'inv_item_margin' => $eachdata->inv_item_margin,
+                            'inv_item_margin_amount' => $eachdata->inv_item_margin_amount,
+                        ];
+                        array_push($updatearray_data, $update_data);
                     }
                     sizeof($updatearray_data) > 0 ? $invItems->updateBatch($updatearray_data, 'inv_item_id') : "";
-                    sizeof($insdata) > 0 ? $invItems->insertBatch($insdata) : "";
                 }
                 $invlogdata = [
                     'inv_log_master_id' =>  $master,
@@ -2972,57 +2951,17 @@ class CommonSettings extends ResourceController
                 ->where("str_to_date(job_open_date, '%d-%M-%y')  <=", $this->request->getVar('end_date'))
                 ->join('cust_data_laabs', 'cust_data_laabs.customer_code=cust_job_data_laabs.customer_no', 'left')
                 ->orderby('job_no', "desc")->findAll();
-            $uniqueArray = $jobs_list;
+            $uniqueArray = $this->removeDuplicates($jobs_list, 'vehicle_id');
             $job_cards = [];
-            $job_cards1 = [];
-            // foreach ($uniqueArray as $temp) {
-            //     $temp['old_jobcard'] = $laabsJob->where("str_to_date(job_open_date, '%d-%M-%y')  <", $this->request->getVar('start_date'))
-            //         ->where('vehicle_id', $temp['vehicle_id'])->where('job_status', 'INV')->orderby('job_no', "desc")->first();
-
-
-            //         array_push($job_cards, $temp);
-            // }
-
-
-            $startDate = $this->request->getVar('start_date');
-            $laabsJobs = $laabsJob->select('*')
-                ->where("str_to_date(job_open_date, '%d-%M-%y') <", $startDate)
-                ->where('job_status', 'INV')
-                ->orderby('job_no', "desc")
-                ->findAll();
-
-
-            $laabsJobsByVehicleId = [];
-            foreach ($laabsJobs as $job) {
-                $vehicleId = $job['vehicle_id'];
-                if (!isset($laabsJobsByVehicleId[$vehicleId])) {
-                    $laabsJobsByVehicleId[$vehicleId] = [];
-                }
-                $laabsJobsByVehicleId[$vehicleId][] = $job;
-            }
-
-
-            foreach ($uniqueArray as &$temp) {
-                $vehicleId = $temp['vehicle_id'];
-                $temp['old_jobcard'] = null;
-
-                if (isset($laabsJobsByVehicleId[$vehicleId])) {
-
-                    $temp['old_jobcard'] = reset($laabsJobsByVehicleId[$vehicleId]);
-                }
-
-
+            foreach ($uniqueArray as $temp) {
+                $temp['old_jobcard'] = $laabsJob->where("str_to_date(job_open_date, '%d-%M-%y')  <", $this->request->getVar('start_date'))
+                    ->where('vehicle_id', $temp['vehicle_id'])->where('job_status', 'INV')->orderby('job_no', "desc")->first();
                 array_push($job_cards, $temp);
             }
-
-            $uniqueArray1 = $this->removeDuplicates($job_cards, 'vehicle_id');
             if (sizeof($jobs_list)) {
                 $response = [
                     'ret_data' => 'success',
-                    'customers' => $uniqueArray1,
-                    'job_cards' => $job_cards,
-
-
+                    'customers' => $job_cards
                 ];
             } else {
                 $response = [

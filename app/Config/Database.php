@@ -25,6 +25,7 @@ class Database extends Config
      */
     public $defaultGroup = 'default';
 
+
     /**
      * The default database connection.
      *
@@ -50,6 +51,29 @@ class Database extends Config
         'port'     => 3306,
     ];
 
+
+
+    public $secondary = [
+        'DSN'      => '',
+        'hostname' => '217.165.233.177',
+        'username' => 'dxbmaraghiuser',
+        'password' => '123Dxbmaraghi1!@#',
+        'database' => 'cdr',
+        'DBDriver' => 'MySQLi',
+        'DBPrefix' => '',
+        'pConnect' => false,
+        'DBDebug'  => (ENVIRONMENT !== 'production'),
+        'charset'  => 'utf8',
+        'DBCollat' => 'utf8_general_ci',
+        'swapPre'  => '',
+        'encrypt'  => false,
+        'compress' => false,
+        'strictOn' => false,
+        'failover' => [],
+        'port'     => 3306,
+    ];
+
+   
     /**
      * This database connection is used when
      * running PHPUnit database tests.
@@ -67,7 +91,7 @@ class Database extends Config
         'pConnect' => false,
         'DBDebug'  => (ENVIRONMENT !== 'production'),
         'charset'  => 'utf8',
-        'DBCollat' => 'utf8mb4',
+        'DBCollat' => 'utf8_general_ci',
         'swapPre'  => '',
         'encrypt'  => false,
         'compress' => false,
@@ -86,5 +110,7 @@ class Database extends Config
         if (ENVIRONMENT === 'testing') {
             $this->defaultGroup = 'tests';
         }
+
+        
     }
 }

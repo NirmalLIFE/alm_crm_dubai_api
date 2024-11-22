@@ -10,6 +10,12 @@ use App\Models\UserModel;
 
 class YeaStarController extends ResourceController
 {
+
+    private $db;
+    public function __construct()
+    {
+        $third_DB =  \Config\Database::connect('secondary');
+    }
     public function getCDRDetails()
     {
         $common = new Common();
@@ -53,36 +59,83 @@ class YeaStarController extends ResourceController
                 if (isset($disposition)) {
                     $fields['disposition'] = $disposition;
                 }
+
+
+
+                //start 
+              
+        
+                $third_DB =  \Config\Database::connect('secondary');
+                
+                if (isset($call_type)) {
+                    $sql = "select id,datetime,timestamp,uid,src,dst,srctrunk,dsttrunk,duration,ringduration,talkduration,disposition,calltype,uniqueid from cdr.cdr where displayonweb=1";
+                    if ($call_type == "All") {
+                        $sql = $sql . " and calltype!='Internal'";
+                    } else {
+                        $sql = $sql . ' and calltype=' . $third_DB->escape($call_type);
+                    }
+                    if (isset($start_day) && isset($end_day)) {
+                        $sql = $sql . ' and datetime between ' . $third_DB->escape($start_day) . ' and ' . $third_DB->escape($end_day);
+                    }
+                    if (isset($disposition)) {
+                        $sql = $sql . ' and disposition=' . $third_DB->escape($disposition);
+                    }
+                    if (isset($call_to)) {
+                        $sql = $sql . ' and dst=' . $third_DB->escape($call_to);
+                    }
+                    if (isset($call_from)) {
+                        $sql = $sql . ' and src=' . $third_DB->escape($call_from);
+                    }
+                    if (isset($selected_trunk)) {
+                        $sql = $sql . ' and srctrunk in (' . $third_DB->escape($selected_trunk) . ')';
+                    }
+                    $sql = $sql . " order by datetime desc";
+                    $maindata =  $third_DB->query($sql);
+                    
+                    if ($maindata->getNumRows() > 0) {
+                        $result['call_data'] = $maindata->getResultArray();
+                    } else {
+                        $result['call_data'] = [];
+                    }
+        
+                    $result['ret_data'] = "success";
+                } else {
+                    $result['call_data'] = [];
+                    $result['ret_data'] = "fail";
+                }
+                return $this->respond($result, 200);
+                //end
                 // $fields = array(
                 //     'inv_no' => $inv_no,
                 //     'branchcode' =>  $branchcode,
                 // );
 
-                $fields = json_encode($fields);
-                $ch = curl_init();
-                curl_setopt($ch, CURLOPT_URL, "http://almaraghi.fortiddns.com:35147/maraghi_lead_connection/index.php/DataFetch/getLatestCallReportData");
-                curl_setopt($ch, CURLOPT_HTTPHEADER, array(
-                    'Content-Type: application/json; charset=utf-8'
-                ));
-                curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
-                curl_setopt($ch, CURLOPT_HEADER, FALSE);
-                curl_setopt($ch, CURLOPT_POST, TRUE);
-                curl_setopt($ch, CURLOPT_POSTFIELDS, $fields);
-                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
+                // $fields = json_encode($fields);
+                // $ch = curl_init();
+                // curl_setopt($ch, CURLOPT_URL, "http://almaraghi.fortiddns.com:35147/maraghi_lead_connection/index.php/DataFetch/getLatestCallReportData");
+                // curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+                //     'Content-Type: application/json; charset=utf-8'
+                // ));
+                // curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
+                // curl_setopt($ch, CURLOPT_HEADER, FALSE);
+                // curl_setopt($ch, CURLOPT_POST, TRUE);
+                // curl_setopt($ch, CURLOPT_POSTFIELDS, $fields);
+                // curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
 
-                $curlResponse = json_decode(curl_exec($ch));
-                $response['call_data'] = $curlResponse->call_data;
-                $response['ret_data'] = 'success';
-                curl_close($ch);
-            } else {
-                $response['call_data'] = [];
-                $response['ret_data'] = 'fail';
-            }
+                // $curlResponse = json_decode(curl_exec($ch));
+                // $response['call_data'] = $curlResponse->call_data;
 
-            return $this->respond($response, 200);
+
+            //     $response['ret_data'] = 'success';
+            //     curl_close($ch);
+            // } else {
+            //     $response['call_data'] = [];
+            //     $response['ret_data'] = 'fail';
+            // }
+
         }
     }
-
+    }
 
     public function getCDRDetailsByNumber()
     {
@@ -134,29 +187,60 @@ class YeaStarController extends ResourceController
                 //     'branchcode' =>  $branchcode,
                 // );
 
-                $fields = json_encode($fields);
-                $ch = curl_init();
-                curl_setopt($ch, CURLOPT_URL, "http://almaraghi.fortiddns.com:35147/maraghi_lead_connection/index.php/DataFetch/getLatestCallReportByNumber");
-                curl_setopt($ch, CURLOPT_HTTPHEADER, array(
-                    'Content-Type: application/json; charset=utf-8'
-                ));
-                curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
-                curl_setopt($ch, CURLOPT_HEADER, FALSE);
-                curl_setopt($ch, CURLOPT_POST, TRUE);
-                curl_setopt($ch, CURLOPT_POSTFIELDS, $fields);
-                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
+            //     $fields = json_encode($fields);
+            //     $ch = curl_init();
+            //     curl_setopt($ch, CURLOPT_URL, "http://almaraghi.fortiddns.com:35147/maraghi_lead_connection/index.php/DataFetch/getLatestCallReportByNumber");
+            //     curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+            //         'Content-Type: application/json; charset=utf-8'
+            //     ));
+            //     curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
+            //     curl_setopt($ch, CURLOPT_HEADER, FALSE);
+            //     curl_setopt($ch, CURLOPT_POST, TRUE);
+            //     curl_setopt($ch, CURLOPT_POSTFIELDS, $fields);
+            //     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
 
-                $curlResponse = json_decode(curl_exec($ch));
-                $response['call_data'] = $curlResponse->call_data;
-                $response['ret_data'] = 'success';
-                curl_close($ch);
+            //     $curlResponse = json_decode(curl_exec($ch));
+            //     $response['call_data'] = $curlResponse->call_data;
+            //     $response['ret_data'] = 'success';
+            //     curl_close($ch);
+            // } else {
+            //     $response['call_data'] = [];
+            //     $response['ret_data'] = 'fail';
+            // }
+
+
+            //start
+
+            if (isset($phoneNumber)) {
+                // $third_DB = $this->load->database('yeaStar', TRUE);
+               
+                $sql = "select id,datetime,timestamp,uid,src,dst,srctrunk,dsttrunk,duration,ringduration,talkduration,disposition,calltype,uniqueid from cdr.cdr where displayonweb=1 and calltype!='Internal'";
+    
+                if (isset($start_day) && isset($end_day)) {
+                    $sql = $sql . ' and datetime between ' . $third_DB->escape($start_day) . ' and ' . $third_DB->escape($end_day);
+                }
+                if (isset($disposition)) {
+                    $sql = $sql . ' and disposition=' . $third_DB->escape($disposition);
+                }
+                $sql = $sql . ' and (src=' . $third_DB->escape($phoneNumber) . ' or dst=' . $third_DB->escape($phoneNumber) . ')';
+                $sql = $sql . " order by datetime desc limit 1000";
+                $maindata =  $third_DB->query($sql);
+                if ($maindata->getNumRows() > 0) {
+                    $result['call_data'] = $maindata->getResultArray();
+                } else {
+                    $result['call_data'] = [];
+                }
+    
+                $result['ret_data'] = "success";
             } else {
-                $response['call_data'] = [];
-                $response['ret_data'] = 'fail';
+                $result['call_data'] = [];
+                $result['ret_data'] = "fail";
             }
+            //end
 
-            return $this->respond($response, 200);
+            return $this->respond($result, 200);
         }
+    }
     }
 
 
@@ -202,35 +286,65 @@ class YeaStarController extends ResourceController
                 }
             }
 
-            $fields = json_encode($fields);
+            // $fields = json_encode($fields);
 
-            $ch = curl_init();
-            curl_setopt($ch, CURLOPT_URL, "http://almaraghi.fortiddns.com:35147/maraghi_lead_connection/index.php/DataFetch/getLatestCallReportByNumberList");
-            curl_setopt($ch, CURLOPT_HTTPHEADER, array(
-                'Content-Type: application/json; charset=utf-8'
-            ));
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
-            curl_setopt($ch, CURLOPT_HEADER, FALSE);
-            curl_setopt($ch, CURLOPT_POST, TRUE);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, $fields);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
-            $curlResponse = json_decode(curl_exec($ch));
-            curl_close($ch);
+            // $ch = curl_init();
+            // curl_setopt($ch, CURLOPT_URL, "http://almaraghi.fortiddns.com:35147/maraghi_lead_connection/index.php/DataFetch/getLatestCallReportByNumberList");
+            // curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+            //     'Content-Type: application/json; charset=utf-8'
+            // ));
+            // curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
+            // curl_setopt($ch, CURLOPT_HEADER, FALSE);
+            // curl_setopt($ch, CURLOPT_POST, TRUE);
+            // curl_setopt($ch, CURLOPT_POSTFIELDS, $fields);
+            // curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
+            // $curlResponse = json_decode(curl_exec($ch));
+            // curl_close($ch);
 
-            if ($curlResponse->call_data && sizeof($curlResponse->call_data) > 0) {
-                $inboundcalldata = array_merge($inboundcalldata, $curlResponse->call_data);
-            }
-            $response = [];
+            // if ($curlResponse->call_data && sizeof($curlResponse->call_data) > 0) {
+            //     $inboundcalldata = array_merge($inboundcalldata, $curlResponse->call_data);
+            // }
+            // $response = [];
 
-            if (sizeof($inboundcalldata) > 0) {
-                $response['customer'] = $inboundcalldata;
-                $response['ret_data'] = 'success';
+            // if (sizeof($inboundcalldata) > 0) {
+            //     $response['customer'] = $inboundcalldata;
+            //     $response['ret_data'] = 'success';
+            // } else {
+            //     $response['customer'] = [];
+            //     $response['ret_data'] = 'fail';
+            // }
+
+
+            //start
+            if (isset($phoneNumberList) && sizeof($phoneNumberList) > 0) {
+                $result['call_data'] = [];
+                foreach ($phoneNumberList as $phoneNumber) {
+                    $third_DB =  \Config\Database::connect('secondary');
+                    $sql = "select id,datetime,timestamp,uid,src,dst,srctrunk,dsttrunk,duration,ringduration,talkduration,disposition,calltype,uniqueid from cdr.cdr where displayonweb=1 and calltype!='Internal'";
+    
+                    if (isset($start_day) && isset($end_day)) {
+                        $sql = $sql . ' and datetime between ' . $third_DB->escape($start_day) . ' and ' . $third_DB->escape($end_day);
+                    }
+                    if (isset($disposition)) {
+                        $sql = $sql . ' and disposition=' . $third_DB->escape($disposition);
+                    }
+                    $sql = $sql . ' and (src=' . $third_DB->escape($phoneNumber) . ' or dst=' . $third_DB->escape($phoneNumber) . ')';
+                    $sql = $sql . " order by datetime desc limit 1000";
+                    $maindata =  $third_DB->query($sql);
+                    if ($maindata->getNumRows() > 0) {
+                        $call_data = $maindata->getResultArray();
+                        array_push($result['call_data'], $call_data);
+                    }
+                }
+                $result['ret_data'] = "success";
             } else {
-                $response['customer'] = [];
-                $response['ret_data'] = 'fail';
+                $result['call_data'] = [];
+                $result['ret_data'] = "fail";
             }
 
-            return $this->respond($response, 200);
+            //end
+
+            return $this->respond($result, 200);
         }
     }
 
@@ -268,34 +382,63 @@ class YeaStarController extends ResourceController
                 $fields['start_day'] = $start_day;
                 $fields['end_day'] = $end_day;
             }
-            $fields = json_encode($fields);
+            // $fields = json_encode($fields);
 
-            $ch = curl_init();
-            curl_setopt($ch, CURLOPT_URL, "http://almaraghi.fortiddns.com:35147/maraghi_lead_connection/index.php/DataFetch/getLatestCallReportByNumberList");
-            curl_setopt($ch, CURLOPT_HTTPHEADER, array(
-                'Content-Type: application/json; charset=utf-8'
-            ));
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
-            curl_setopt($ch, CURLOPT_HEADER, FALSE);
-            curl_setopt($ch, CURLOPT_POST, TRUE);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, $fields);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
+            // $ch = curl_init();
+            // curl_setopt($ch, CURLOPT_URL, "http://almaraghi.fortiddns.com:35147/maraghi_lead_connection/index.php/DataFetch/getLatestCallReportByNumberList");
+            // curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+            //     'Content-Type: application/json; charset=utf-8'
+            // ));
+            // curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
+            // curl_setopt($ch, CURLOPT_HEADER, FALSE);
+            // curl_setopt($ch, CURLOPT_POST, TRUE);
+            // curl_setopt($ch, CURLOPT_POSTFIELDS, $fields);
+            // curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
 
-            $curlResponse = json_decode(curl_exec($ch));
-            curl_close($ch);
+            // $curlResponse = json_decode(curl_exec($ch));
+            // curl_close($ch);
 
-            if ($curlResponse->call_data && sizeof($curlResponse->call_data) > 0) {
-                $inboundcalldata = array_merge($inboundcalldata, $curlResponse->call_data);
-            }
-            $response = [];
+            // if ($curlResponse->call_data && sizeof($curlResponse->call_data) > 0) {
+            //     $inboundcalldata = array_merge($inboundcalldata, $curlResponse->call_data);
+            // }
+            // $response = [];
 
-            if (sizeof($inboundcalldata) > 0) {
-                $response['customer'] = $inboundcalldata;
-                $response['ret_data'] = 'success';
+            // if (sizeof($inboundcalldata) > 0) {
+            //     $response['customer'] = $inboundcalldata;
+            //     $response['ret_data'] = 'success';
+            // } else {
+            //     $response['customer'] = [];
+            //     $response['ret_data'] = 'fail';
+            // }
+
+            //start
+
+            if (isset($phoneNumberList) && sizeof($phoneNumberList) > 0) {
+                $result['call_data'] = [];
+                foreach ($phoneNumberList as $phoneNumber) {
+                   
+                    $sql = "select id,datetime,timestamp,uid,src,dst,srctrunk,dsttrunk,duration,ringduration,talkduration,disposition,calltype,uniqueid from cdr.cdr where displayonweb=1 and calltype!='Internal'";
+    
+                    if (isset($start_day) && isset($end_day)) {
+                        $sql = $sql . ' and datetime between ' . $third_DB->escape($start_day) . ' and ' . $third_DB->escape($end_day);
+                    }
+                    if (isset($disposition)) {
+                        $sql = $sql . ' and disposition=' . $third_DB->escape($disposition);
+                    }
+                    $sql = $sql . ' and (src=' . $third_DB->escape($phoneNumber) . ' or dst=' . $third_DB->escape($phoneNumber) . ')';
+                    $sql = $sql . " order by datetime desc limit 1000";
+                    $maindata =  $third_DB->query($sql);
+                    if ($maindata->getNumRows() > 0) {
+                        $call_data = $maindata->getResultArray();
+                        array_push($result['call_data'], $call_data);
+                    }
+                }
+                $result['ret_data'] = "success";
             } else {
-                $response['customer'] = [];
-                $response['ret_data'] = 'fail';
+                $result['call_data'] = [];
+                $result['ret_data'] = "fail";
             }
+            //end
 
             return $this->respond($result, 200);
         }
@@ -344,36 +487,66 @@ class YeaStarController extends ResourceController
                     $fields['call_type'] = $call_type;
                 }
             }
-            $fields = json_encode($fields);
-            $ch = curl_init();
-            curl_setopt($ch, CURLOPT_URL, "http://almaraghi.fortiddns.com:35147/maraghi_lead_connection/index.php/DataFetch/getLatestCallReportByNumberList");
-            curl_setopt($ch, CURLOPT_HTTPHEADER, array(
-                'Content-Type: application/json; charset=utf-8'
-            ));
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
-            curl_setopt($ch, CURLOPT_HEADER, FALSE);
-            curl_setopt($ch, CURLOPT_POST, TRUE);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, $fields);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
+            // $fields = json_encode($fields);
+            // $ch = curl_init();
+            // curl_setopt($ch, CURLOPT_URL, "http://almaraghi.fortiddns.com:35147/maraghi_lead_connection/index.php/DataFetch/getLatestCallReportByNumberList");
+            // curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+            //     'Content-Type: application/json; charset=utf-8'
+            // ));
+            // curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
+            // curl_setopt($ch, CURLOPT_HEADER, FALSE);
+            // curl_setopt($ch, CURLOPT_POST, TRUE);
+            // curl_setopt($ch, CURLOPT_POSTFIELDS, $fields);
+            // curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
 
-            $curlResponse = json_decode(curl_exec($ch));
-            curl_close($ch);
-            if ($curlResponse->call_data && sizeof($curlResponse->call_data) > 0) {
-                $inboundcalldata = array_merge($inboundcalldata, $curlResponse->call_data);
-            }
+            // $curlResponse = json_decode(curl_exec($ch));
+            // curl_close($ch);
+            // if ($curlResponse->call_data && sizeof($curlResponse->call_data) > 0) {
+            //     $inboundcalldata = array_merge($inboundcalldata, $curlResponse->call_data);
+            // }
 
 
-            //  }
+            // //  }
 
-            if (sizeof($inboundcalldata) > 0) {
-                $response['customer'] = $inboundcalldata;
-                $response['ret_data'] = 'success';
+            // if (sizeof($inboundcalldata) > 0) {
+            //     $response['customer'] = $inboundcalldata;
+            //     $response['ret_data'] = 'success';
+            // } else {
+            //     $response['call_data'] = [];
+            //     $response['ret_data'] = 'fail';
+            // }
+
+
+            //start
+
+            if (isset($phoneNumberList) && sizeof($phoneNumberList) > 0) {
+                $result['call_data'] = [];
+                foreach ($phoneNumberList as $phoneNumber) {
+              
+                    $sql = "select id,datetime,timestamp,uid,src,dst,srctrunk,dsttrunk,duration,ringduration,talkduration,disposition,calltype,uniqueid from cdr.cdr where displayonweb=1 and calltype!='Internal'";
+    
+                    if (isset($start_day) && isset($end_day)) {
+                        $sql = $sql . ' and datetime between ' . $third_DB->escape($start_day) . ' and ' . $third_DB->escape($end_day);
+                    }
+                    if (isset($disposition)) {
+                        $sql = $sql . ' and disposition=' . $third_DB->escape($disposition);
+                    }
+                    $sql = $sql . ' and (src=' . $third_DB->escape($phoneNumber) . ' or dst=' . $third_DB->escape($phoneNumber) . ')';
+                    $sql = $sql . " order by datetime desc limit 1000";
+                    $maindata =  $third_DB->query($sql);
+                    if ($maindata->getNumRows() > 0) {
+                        $call_data = $maindata->getResultArray();
+                        array_push($result['call_data'], $call_data);
+                    }
+                }
+                $result['ret_data'] = "success";
             } else {
-                $response['call_data'] = [];
-                $response['ret_data'] = 'fail';
+                $result['call_data'] = [];
+                $result['ret_data'] = "fail";
             }
+            //end
 
-            return $this->respond($response, 200);
+            return $this->respond($result, 200);
         }
     }
 
@@ -407,40 +580,68 @@ class YeaStarController extends ResourceController
 
             $outboundcalldata = [];
 
-            $fields['phoneNumber'] = $this->request->getVar('call_to');
-            if (isset($start_day) && isset($end_day)) {
-                $fields['start_day'] = $start_day;
-                $fields['end_day'] = $end_day;
-            }
-            $fields = json_encode($fields);
-            $ch = curl_init();
-            curl_setopt($ch, CURLOPT_URL, "http://almaraghi.fortiddns.com:35147/maraghi_lead_connection/index.php/DataFetch/getLatestCallReportByNumberList");
-            curl_setopt($ch, CURLOPT_HTTPHEADER, array(
-                'Content-Type: application/json; charset=utf-8'
-            ));
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
-            curl_setopt($ch, CURLOPT_HEADER, FALSE);
-            curl_setopt($ch, CURLOPT_POST, TRUE);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, $fields);
-            curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
+            // $fields['phoneNumber'] = $this->request->getVar('call_to');
+            // if (isset($start_day) && isset($end_day)) {
+            //     $fields['start_day'] = $start_day;
+            //     $fields['end_day'] = $end_day;
+            // }
+            // $fields = json_encode($fields);
+            // $ch = curl_init();
+            // curl_setopt($ch, CURLOPT_URL, "http://almaraghi.fortiddns.com:35147/maraghi_lead_connection/index.php/DataFetch/getLatestCallReportByNumberList");
+            // curl_setopt($ch, CURLOPT_HTTPHEADER, array(
+            //     'Content-Type: application/json; charset=utf-8'
+            // ));
+            // curl_setopt($ch, CURLOPT_RETURNTRANSFER, TRUE);
+            // curl_setopt($ch, CURLOPT_HEADER, FALSE);
+            // curl_setopt($ch, CURLOPT_POST, TRUE);
+            // curl_setopt($ch, CURLOPT_POSTFIELDS, $fields);
+            // curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
 
-            $curlResponse = json_decode(curl_exec($ch));
-            curl_close($ch);
+            // $curlResponse = json_decode(curl_exec($ch));
+            // curl_close($ch);
 
-            if ($curlResponse->call_data && sizeof($curlResponse->call_data) > 0) {
-                $outboundcalldata = array_merge($outboundcalldata, $curlResponse->call_data);
-            }
+            // if ($curlResponse->call_data && sizeof($curlResponse->call_data) > 0) {
+            //     $outboundcalldata = array_merge($outboundcalldata, $curlResponse->call_data);
+            // }
 
 
-            if (sizeof($outboundcalldata) > 0) {
-                $response['customer'] = $outboundcalldata;
-                $response['ret_data'] = 'success';
+            // if (sizeof($outboundcalldata) > 0) {
+            //     $response['customer'] = $outboundcalldata;
+            //     $response['ret_data'] = 'success';
+            // } else {
+            //     $response['call_data'] = [];
+            //     $response['ret_data'] = 'fail';
+            // }
+
+            //start
+            if (isset($phoneNumberList) && sizeof($phoneNumberList) > 0) {
+                $result['call_data'] = [];
+                foreach ($phoneNumberList as $phoneNumber) {
+                 
+                    $sql = "select id,datetime,timestamp,uid,src,dst,srctrunk,dsttrunk,duration,ringduration,talkduration,disposition,calltype,uniqueid from cdr.cdr where displayonweb=1 and calltype!='Internal'";
+    
+                    if (isset($start_day) && isset($end_day)) {
+                        $sql = $sql . ' and datetime between ' . $third_DB->escape($start_day) . ' and ' . $third_DB->escape($end_day);
+                    }
+                    if (isset($disposition)) {
+                        $sql = $sql . ' and disposition=' . $third_DB->escape($disposition);
+                    }
+                    $sql = $sql . ' and (src=' . $third_DB->escape($phoneNumber) . ' or dst=' . $third_DB->escape($phoneNumber) . ')';
+                    $sql = $sql . " order by datetime desc limit 1000";
+                    $maindata =  $third_DB->query($sql);
+                    if ($maindata->getNumRows() > 0) {
+                        $call_data = $maindata->getResultArray();
+                        array_push($result['call_data'], $call_data);
+                    }
+                }
+                $result['ret_data'] = "success";
             } else {
-                $response['call_data'] = [];
-                $response['ret_data'] = 'fail';
+                $result['call_data'] = [];
+                $result['ret_data'] = "fail";
             }
+            //end
 
-            return $this->respond($response, 200);
+            return $this->respond($result, 200);
         }
     }
 }
