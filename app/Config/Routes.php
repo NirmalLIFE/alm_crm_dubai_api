@@ -422,7 +422,13 @@ $routes->post('sendCampaignMessage', "Whatsapp/WhatsappChatController::sendCampa
 $routes->post('sendNewCustomerCampaignNewMessage', "Whatsapp/WhatsappChatController::sendNewCustomerCampaignNewMessage", ['filter' => 'authFilter']);
 $routes->post('searchWhatsappCustomer', "Whatsapp/WhatsappChatController::searchWhatsappCustomer", ['filter' => 'authFilter']);
 $routes->get('getWhatsappCustomersFollowups', "Whatsapp/WhatsappChatController::getWhatsappCustomersFollowups", ['filter' => 'authFilter']);
-
+$routes->get('sendSMCWithDays', "Customer/CustomerReEngageCampaignController::sendSMCWithDays", ['filter' => 'authFilter']);
+$routes->post('fetchAllFollowUpCustomers', "Customer/CustomerReEngageCampaignController::fetchAllFollowUpCustomers", ['filter' => 'authFilter']);
+$routes->get("getServiceRemainderDays", "Settings/CommonSettings::getServiceRemainderDays", ['filter' => 'authFilter']);
+$routes->post('updateServiceRemainderDays', "Settings/CommonSettings::updateServiceRemainderDays", ['filter' => 'authFilter']);
+$routes->post('getSRCReport', "Customer/CustomerReEngageCampaignController::getSRCReport", ['filter' => 'authFilter']);
+$routes->post('getAppointmentCustomersFromSRC', "Customer/CustomerReEngageCampaignController::getAppointmentCustomersFromSRC", ['filter' => 'authFilter']);
+$routes->post('updateWhatsappAutoMessageHours', "Whatsapp/WhatsappChatController::updateWhatsappAutoMessageHours", ['filter' => 'authFilter']);
 
 
 

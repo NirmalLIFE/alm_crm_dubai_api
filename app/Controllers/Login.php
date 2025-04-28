@@ -50,25 +50,25 @@ class Login extends ResourceController
             $verify = strcmp(base64_encode($aeskey), $res['us_password']);
             // $verify=strcmp($org_pass,$this->request->getVar('userpassword'));
             if ($verify == 0) {
-                if ($res['tr_grp_status'] == 1) {
-                    $otpto = $res['us_phone'];
-                    $jwtres = $common->generate_user_jwt_token($res['us_id']);
-                } else {
-                    $builder = $this->db->table('common_settings');
-                    $query = $builder->get();
-                    $row = $query->getRow();
-                    $result = $row->verification_number;
-                    // $otpto =$result;
-                    $otpto = +971509766075;
-                    $jwtres = $common->generate_user_jwt_token($res['us_id']);
-                    // $jwtres = $common->generate_user_jwt_token($res['us_id']);
-                }
+                // if ($res['tr_grp_status'] == 1) {
+                //     $otpto = $res['us_phone'];
+                //     $jwtres = $common->generate_user_jwt_token($res['us_id']);
+                // } else {
+                //     $builder = $this->db->table('common_settings');
+                //     $query = $builder->get();
+                //     $row = $query->getRow();
+                //     $result = $row->verification_number;
+                //     // $otpto =$result;
+                //     $otpto = +971509766075;
+                //     $jwtres = $common->generate_user_jwt_token($res['us_id']);
+                //     // $jwtres = $common->generate_user_jwt_token($res['us_id']);
+                // }
 
 
 
 
 
-                $token = $jwtres['token'];
+                // $token = $jwtres['token'];
                 // if( $jwtres['iat'] < $res['last_login'] || $res['last_login'] =='')
                 // {
                 //     echo "iat".$jwtres['iat']; echo "\n";
@@ -91,24 +91,33 @@ class Login extends ResourceController
                     $data['ret_data'] = "fail";
                     return $this->respond($data);
                 } else {
-
+                   
                     $re = $IPmodel->where('pip_address', $ip)->where('pip_delete_flag', 0)->select('pip_address,pip_id')->first();
-                    $re = true;
+                    $re = true; /// only for local
+                    log_message('error',  "re 98 >>>>" . json_encode($re));
+                    log_message('error',  "res 99 >>>>" . json_encode($res));
+
                     if (!$re) {
-                        if ($res['tr_grp_status'] == 1) {
-                            $otpto = $res['us_phone'];
+                        if ($res['tr_grp_status'] == '1') {
+                            $originalPhone = $res['us_phone']; // Get the original phone number
+                            $lastNineDigits = substr($originalPhone, -9); // Extract the last 9 digits
+                            $otpto = '+971' . $lastNineDigits;
                         } else {
-                            $builder = $this->db->table('verification_number');
-                            $builder->where('vn_delete_flag', 0);
-                            $query = $builder->get();
-                            $row = $query->getRow();
-                            $result = $row->vn_number;
-                            $otpto = $result;
+                            $data['ret_data'] = "fail";
+                            return $this->respond($data);
+                            // $builder = $this->db->table('verification_number');
+                            // $builder->where('vn_delete_flag', 0);
+                            // $query = $builder->get();
+                            // $row = $query->getRow();
+                            // $result = $row->vn_number;
+                            // $otpto = $result;
                             //$otpto = +9710509766075;
                         }
-                        //   $result=$twilioConfig->sendVerificationCode($otpto,"sms");
-                        $result = 'pending';
+                        $result = $twilioConfig->sendVerificationCode($otpto, "sms");
+                        // $result = 'pending';
                         if ($result == 'pending') {
+                            $jwtres = $common->generate_user_jwt_token($res['us_id']);
+                            $token = $jwtres['token'];
                             $role_grp = $userroleModel->select('role_groupid')->where('role_id', $res['us_role_id'])->first();
                             $userdata = array(
                                 "us_id" => $res['us_id'],
@@ -138,6 +147,7 @@ class Login extends ResourceController
                             $data['access'] = $features;
                             $data['ret_data'] = "success";
                             $data['verify'] = 'false';
+                            $data['us_phone'] = $res['us_phone'];
 
                             $indata = [
                                 'login_status'    => 1,
@@ -156,7 +166,8 @@ class Login extends ResourceController
                             return $this->respond($data);
                         }
                     } else {
-
+                        $jwtres = $common->generate_user_jwt_token($res['us_id']);
+                        $token = $jwtres['token'];
                         $role_grp = $userroleModel->select('role_groupid')->where('role_id', $res['us_role_id'])->first();
                         $userdata = array(
                             "us_id" => $res['us_id'],
@@ -243,11 +254,16 @@ class Login extends ResourceController
     {
         $rules = [
             'otp' => 'required',
+            'us_phone' => 'required',
         ];
         if (!$this->validate($rules)) return $data['ret_data'] = "fail";
         $twilioConfig = new TwilioConfig();
-        //$verify=$twilioConfig->verifyVerificationCode("+9710509766075",$this->request->getVar('otp'));
-        $verify = "approved";
+        $us_phone = $this->request->getVar('us_phone');
+        $lastNineDigits = substr($us_phone, -9); // Get last 9 digits
+        $newPhone = '+971' . $lastNineDigits;
+        $verify = $twilioConfig->verifyVerificationCode($newPhone, $this->request->getVar('otp'));
+        log_message('error',  "message >>>verify otp>>>>>>" . json_encode($verify));
+        // $verify = "approved";
         if ($verify == "approved") {
             $data['ret_data'] = "success";
             return $this->respond($data);

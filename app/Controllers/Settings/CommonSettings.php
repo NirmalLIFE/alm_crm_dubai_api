@@ -1021,19 +1021,19 @@ class CommonSettings extends ResourceController
 
         $curlResponse = json_decode(curl_exec($ch));
         curl_close($ch);
-        
+
         if ($curlResponse && sizeof($curlResponse) > 0) {
             $response = [
                 'ret_data' => 'success',
-                'job_data'=> $curlResponse
+                'job_data' => $curlResponse
             ];
         } else {
             $response = [
                 'ret_data' => 'success',
-                'job_data'=>[]
+                'job_data' => []
             ];
         }
-        return $this->respond( $response, 200);
+        return $this->respond($response, 200);
     }
 
     public function updatePartsMargin()
@@ -3420,5 +3420,125 @@ class CommonSettings extends ResourceController
             }
         }
         return $this->respond($response, 200);
+    }
+
+
+    public function getServiceRemainderDays()
+    {
+        $common = new Common();
+        $valid = new Validation();
+        $heddata = $this->request->headers();
+        $tokendata = $common->decode_jwt_token($valid->getbearertoken($heddata['Authorization']));
+
+        if ($tokendata['aud'] == 'superadmin') {
+            $SuperModel = new SuperAdminModel();
+            $super = $SuperModel->where("s_adm_id", $tokendata['uid'])->first();
+            if (!$super) return $this->fail("invalid user", 400);
+        } else if ($tokendata['aud'] == 'user') {
+            $usmodel = new UserModel();
+            $user = $usmodel->where("us_id", $tokendata['uid'])->first();
+            if (!$user) return $this->fail("invalid user", 400);
+        } else {
+            $data['ret_data'] = "Invalid user";
+            return $this->fail($data, 400);
+        }
+        if ($tokendata) {
+            $builder = $this->db->table('sequence_data');
+            $builder->select('first_service_remainder_days,second_service_remainder_days,third_service_remainder_days');
+            $query = $builder->get();
+            $row = $query->getRow();
+
+            if ($row) {
+                $response = [
+                    'ret_data' => 'success',
+                    'serviceRemainderDays' => $row,
+
+                ];
+                return $this->respond($response, 200);
+            } else {
+                $response = [
+                    'ret_data' => 'fail',
+                ];
+                return $this->respond($response, 200);
+            }
+        } else {
+            $response = [
+                'ret_data' => 'fail',
+            ];
+            return $this->respond($response, 200);
+        }
+    }
+
+    public function updateServiceRemainderDays()
+    {
+        $common = new Common();
+        $valid = new Validation();
+        $heddata = $this->request->headers();
+        $tokendata = $common->decode_jwt_token($valid->getbearertoken($heddata['Authorization']));
+
+        if ($tokendata['aud'] == 'superadmin') {
+            $SuperModel = new SuperAdminModel();
+            $super = $SuperModel->where("s_adm_id", $tokendata['uid'])->first();
+            if (!$super) return $this->fail("invalid user", 400);
+        } else if ($tokendata['aud'] == 'user') {
+            $usmodel = new UserModel();
+            $user = $usmodel->where("us_id", $tokendata['uid'])->first();
+            if (!$user) return $this->fail("invalid user", 400);
+        } else {
+            $data['ret_data'] = "Invalid user";
+            return $this->fail($data, 400);
+        }
+        if ($tokendata) {
+
+            $phase = $this->request->getVar('phase');
+            $serviceRemainderDays = $this->request->getVar('service_remainder_days');
+
+            if ($phase && $serviceRemainderDays) {
+                $builder = $this->db->table('sequence_data');
+                switch ($phase) {
+                    case 1:
+                        $builder->set('first_service_remainder_days', $this->db->escapeString($serviceRemainderDays));
+                        break;
+                    case 2:
+                        $builder->set('second_service_remainder_days', $this->db->escapeString($serviceRemainderDays));
+                        break;
+                    case 3:
+                        $builder->set('third_service_remainder_days', $this->db->escapeString($serviceRemainderDays));
+                        break;
+                    default:
+                        $response = [
+                            'ret_data' => 'fail',
+                            'message' => 'Invalid phase',
+                        ];
+                        return $this->respond($response, 400);
+                }
+
+                $updated = $builder->update();
+                if ($updated) {
+                    $response = [
+                        'ret_data' => 'success',
+                        'message' => 'Updated',
+                    ];
+                    return $this->respond($response, 200);
+                } else {
+                    $response = [
+                        'ret_data' => 'fail',
+                        'message' => 'Update failed',
+                    ];
+                    return $this->respond($response, 400);
+                }
+            } else {
+                $response = [
+                    'ret_data' => 'fail',
+                    'message' => 'Phase or service remainder days are missing',
+                ];
+                return $this->respond($response, 400);
+            }
+        } else {
+            $response = [
+                'ret_data' => 'fail',
+            ];
+            return $this->respond($response, 200);
+        }
     }
 }

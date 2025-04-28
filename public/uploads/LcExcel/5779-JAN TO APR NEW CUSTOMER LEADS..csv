@@ -1,0 +1,208 @@
+﻿lead_code,phone,register_number,Lead Source,Lead Purpose,status_id,Lead Status,lead_note,lead_createdon,customer_code,customer_status
+ALMLD-18273,971508330072,45338-r20,Whatsapp Direct,Service Request / Quotation,1,Opened, SERVICE ENQUIRY,2025-01-01 03:37:59,NULL,New Customer
+ALMLD-18315,971564066035,NULL,Whatsapp Direct,Service Request / Quotation,1,Opened,service contract,2025-01-02 23:05:36,NULL,New Customer
+ALMLD-18328,0503152677,92895-R8,Phone Call,Appointment,1,Opened,SERVICE A AMOUNT 995/-+ TAX / (NEW CUSTOMER /LANDLINE),2025-01-03 01:23:13,NULL,New Customer
+ALMLD-18337,971525017933,NULL,Whatsapp Campaign,Service Request / Quotation,1,Opened,  MINOR SERVICE 995+vat ,2025-01-03 03:45:40,NULL,New Customer
+ALMLD-18370,971565493795,NULL,Whatsapp Campaign,Service Request / Quotation,1,Opened,  MINOR SERVICE 995+vat ,2025-01-04 00:30:05,NULL,New Customer
+ALMLD-18392,971547232909,NULL,Whatsapp Campaign,Service Request / Quotation,1,Opened,  MINOR SERVICE 995+vat ,2025-01-04 20:59:14,NULL,New Customer
+ALMLD-18442,971528388781,NULL,Whatsapp Campaign,Service Request / Quotation,1,Opened,MAJOR SERVICE PRICE,2025-01-06 02:13:25,NULL,New Customer
+ALMLD-18443,971543461514,NULL,Whatsapp Direct,Service Request / Quotation,1,Opened, minor service 900,2025-01-06 02:38:11,NULL,New Customer
+ALMLD-18509,971505020159,NULL,Whatsapp Campaign,Service Request / Quotation,1,Opened, SERVICE ENQUIRY,2025-01-07 18:32:32,NULL,New Customer
+ALMLD-18512,971504152456,no -plate,Phone Call,Service Request / Quotation,6,Closed,service A,2025-01-07 19:36:11,NULL,New Customer
+ALMLD-18515,0563139930,39625-R14,Phone Call,Appointment,1,Opened, SERVICE ENQUIRY,2025-01-07 22:47:05,NULL,New Customer
+ALMLD-18520,0502940606,41803-R4,Phone Call,Appointment,5,Lead To Customer,service enquiry ,2025-01-08 01:30:01,NULL,New Customer
+ALMLD-18528,0501184414,1165-R10,Phone Call,Appointment,6,Closed,major service ,2025-01-08 03:45:54,NULL,New Customer
+ALMLD-18553,0507576575,37452-r9,Phone Call,Service Request / Quotation,6,Closed,major service 1775+tax,2025-01-08 21:29:29,NULL,New Customer
+ALMLD-18600,0568332233,8845-R8,Phone Call,Appointment,5,Lead To Customer,SERVICE B ,2025-01-09 20:28:02,NULL,New Customer
+ALMLD-18601,971544552600,NULL,Whatsapp Direct,Service Request / Quotation,1,Opened,SERVICE CONTRACT ,2025-01-09 22:29:23,NULL,New Customer
+ALMLD-18638,+971585823690,,Phone Call,Appointment,6,Closed,service and repair g class ,2025-01-10 23:19:23,NULL,New Customer
+ALMLD-18639,0503457754,NIL,Phone Call,Service Request / Quotation,1,Opened,service enquiry ,2025-01-10 23:46:06,NULL,New Customer
+ALMLD-18713,971501238669,,Whatsapp Direct,General Enquiry,8,Open/Whatsapp,How much the cost for service A Mercedes cla 250 -2018,2025-01-14 23:53:04,NULL,New Customer
+ALMLD-18720,971506288592,NULL,Whatsapp Campaign,Service Request / Quotation,1,Opened,major service 1775+tax ,2025-01-15 03:21:33,NULL,New Customer
+ALMLD-10716,0503484084,82827-r6,Phone Call,Service Request / Quotation,5,Lead To Customer,major service 1775+tax,2025-01-15 21:09:43,NULL,New Customer
+ALMLD-18778,0553339430,24562-R7,Phone Call,Appointment,5,Lead To Customer,service enquiry ,2025-01-16 22:09:24,NULL,New Customer
+ALMLD-18788,971504045024,NULL,Whatsapp Direct,Service Request / Quotation,1,Opened,service contract ,2025-01-17 01:47:59,NULL,New Customer
+ALMLD-18795,0565020200,26102-R15,SA Direct,Appointment,5,Lead To Customer,service enquiry ,2025-01-17 04:52:30,NULL,New Customer
+ALMLD-18800,0503234568,4514-,Phone Call,Appointment,6,Closed,service enq,2025-01-17 05:56:03,NULL,New Customer
+ALMLD-15050,0563050900,71657-r5,Phone Call,Appointment,5,Lead To Customer,service enquiry ,2025-01-18 21:41:12,NULL,New Customer
+ALMLD-18871,0504448805,NULL,Phone Call,Appointment,6,Closed,service enquiry ( major),2025-01-19 01:41:25,NULL,New Customer
+ALMLD-18924,971568966494,NULL,Whatsapp Campaign,Service Request / Quotation,1,Opened, SERVICE ENQUIRY,2025-01-20 23:19:29,NULL,New Customer
+ALMLD-18952,+971506223689,,Google Marketing,Appointment,6,Closed,service ,2025-01-21 04:37:42,NULL,New Customer
+ALMLD-18971,971585865677,NULL,Whatsapp Campaign,Service Request / Quotation,1,Opened,  MINOR SERVICE 995+vat ,2025-01-21 10:31:45,NULL,New Customer
+ALMLD-18972,971553725212,NULL,Whatsapp Direct,Service Request / Quotation,1,Opened,major service 2075+tax ,2025-01-21 11:21:19,NULL,New Customer
+ALMLD-18993,971506668552,,Whatsapp Direct,General Enquiry,8,Open/Whatsapp,I need to have full service for my car S320,2025-01-21 23:19:53,NULL,New Customer
+ALMLD-19005,0559999983,NULL,Phone Call,Service Request / Quotation,1,Opened,service contract ,2025-01-22 03:31:41,NULL,New Customer
+ALMLD-19048,0501231224,NIL,Phone Call,Service Request / Quotation,1,Opened,service contract ,2025-01-23 05:11:40,NULL,New Customer
+ALMLD-19051,971561537002,NULL,Whatsapp Campaign,Appointment,6,Closed,major service ,2025-01-23 05:54:05,C00018631,New Customer
+ALMLD-19113,971544422321,,Whatsapp Direct,General Enquiry,8,Open/Whatsapp,"Good afternoon id like to ask how muxh is the cost for ""service A"" 2010 e500",2025-01-25 01:36:42,NULL,New Customer
+ALMLD-19137,0558447330,82325-R19,Phone Call,Appointment,5,Lead To Customer,service enquiry ,2025-01-25 22:55:00,NULL,New Customer
+ALMLD-19157,971562551949,,Whatsapp Direct,General Enquiry,8,Open/Whatsapp,What is the cost for major service mercedes gle 350 2020 v4 model,2025-01-27 03:55:29,NULL,New Customer
+ALMLD-19176,0547679494,19673-R10,Phone Call,Appointment,6,Closed,SERVICE ENQUIRY ,2025-01-27 23:00:45,NULL,New Customer
+ALMLD-19185,0569383137,48154-R10,SA Direct,Appointment,5,Lead To Customer,SERVICE ENQUIRY ,2025-01-28 00:11:18,NULL,New Customer
+ALMLD-19219,0502587009,36538-R8,Phone Call,Appointment,5,Lead To Customer,SERVICE ENQUIRY ,2025-01-29 02:10:59,NULL,New Customer
+ALMLD-19230,0563087257,48922-R10,Phone Call,Appointment,1,Opened,SERVICE ENQUIRY ,2025-01-29 03:42:34,NULL,New Customer
+ALMLD-19242,0501200004,23354-R5,Phone Call,Appointment,5,Lead To Customer,service enquiry ,2025-01-29 22:41:53,NULL,New Customer
+ALMLD-19247,024180999,76132-R9,Phone Call,Appointment,1,Opened,SERVICE ENQUIRY  0589662581,2025-01-30 04:38:13,NULL,New Customer
+ALMLD-19269,971507959801,60213,Whatsapp Direct,Appointment,6,Closed, SERVICE ENQUIRY,2025-01-30 23:59:21,C00018670,New Customer
+ALMLD-19312,971564179477,NULL,Whatsapp Campaign,Service Request / Quotation,1,Opened,service contract ,2025-02-01 23:55:57,NULL,New Customer
+ALMLD-19330,971508108725,NULL,Whatsapp Campaign,Service Request / Quotation,1,Opened,  MINOR SERVICE,2025-02-02 04:11:01,NULL,New Customer
+ALMLD-19338,971564166370,NULL,Whatsapp Campaign,Service Request / Quotation,1,Opened,service enquiry ,2025-02-02 13:24:53,NULL,New Customer
+ALMLD-19355,971568414040,13987-R18,Whatsapp Campaign,Appointment,6,Closed, SERVICE ENQUIRY,2025-02-03 18:20:38,NULL,New Customer
+ALMLD-19402,971585976404,NULL,Whatsapp Campaign,Service Request / Quotation,1,Opened,  MINOR SERVICE 995+vat ,2025-02-04 06:26:15,NULL,New Customer
+ALMLD-19437,971561170111,NULL,Whatsapp Direct,Service Request / Quotation,1,Opened,service contract ,2025-02-05 04:09:40,NULL,New Customer
+ALMLD-19454,971501337382,NULL,Whatsapp Campaign,Service Request / Quotation,1,Opened,  MINOR SERVICE 995+vat ,2025-02-05 08:49:32,NULL,New Customer
+ALMLD-19513,971503125670,NULL,Whatsapp Campaign,Service Request / Quotation,1,Opened,  MINOR SERVICE 995+vat ,2025-02-06 18:24:49,NULL,New Customer
+ALMLD-19533,971564472638,NULL,Whatsapp Campaign,Service Request / Quotation,1,Opened,service contract,2025-02-07 01:38:05,NULL,New Customer
+ALMLD-19551,971557445519,NULL,Whatsapp Direct,Service Request / Quotation,1,Opened,SERVICE PRICE ,2025-02-07 09:24:21,NULL,New Customer
+ALMLD-19571,971555043971,NULL,Whatsapp Direct,Service Request / Quotation,1,Opened,  MINOR SERVICE,2025-02-08 01:48:58,NULL,New Customer
+ALMLD-19574,971557426410,NULL,Whatsapp Direct,Service Request / Quotation,1,Opened,  MINOR SERVICE 995+vat ,2025-02-08 02:45:15,NULL,New Customer
+ALMLD-19586,971506535473,NULL,Whatsapp Campaign,Service Request / Quotation,1,Opened,service enquiry ,2025-02-08 08:14:37,NULL,New Customer
+ALMLD-19587,971501231855,NULL,Whatsapp Campaign,Service Request / Quotation,1,Opened,service a ,2025-02-08 10:35:36,NULL,New Customer
+ALMLD-19591,971585813367,NULL,Whatsapp Direct,Service Request / Quotation,1,Opened,service enquiry ,2025-02-08 11:45:32,NULL,New Customer
+ALMLD-19595,971551963734,NULL,Whatsapp Campaign,Service Request / Quotation,1,Opened,major service ,2025-02-08 20:35:19,NULL,New Customer
+ALMLD-19677,0509073388,55224 R8,SA Direct,Appointment,5,Lead To Customer,service enquiry ,2025-02-11 02:33:52,NULL,New Customer
+ALMLD-19689,971506996525,NULL,Whatsapp Campaign,Service Request / Quotation,1,Opened,  MINOR SERVICE 995+vat ,2025-02-11 05:23:13,NULL,New Customer
+ALMLD-19702,0542549910,NULL,Phone Call,Service Request / Quotation,1,Opened,customer asked for minor service quotation ,2025-02-11 19:59:17,NULL,New Customer
+ALMLD-19706,971509909370,NULL,Whatsapp Direct,Service Request / Quotation,1,Opened,MINOR SERVICE PRICE,2025-02-11 21:08:51,NULL,New Customer
+ALMLD-19710,971503960449,12592-R15,Whatsapp Campaign,Service Request / Quotation,6,Closed,  MINOR SERVICE 995+vat ,2025-02-11 22:09:30,NULL,New Customer
+ALMLD-19721,0503818122,32774,Phone Call,Service Request / Quotation,1,Opened, SERVICE ENQUIRY,2025-02-12 02:33:18,NULL,New Customer
+ALMLD-19752,971501430182,NULL,Whatsapp Direct,Service Request / Quotation,1,Opened,major service 2210+tax ,2025-02-13 00:15:27,NULL,New Customer
+ALMLD-19753,0568999907,NULL,Phone Call,Others,6,Closed,when he can do the next service ,2025-02-13 00:16:38,NULL,New Customer
+ALMLD-19784,971507731154,NULL,Whatsapp Campaign,Service Request / Quotation,1,Opened,  MINOR SERVICE 995+vat ,2025-02-13 21:19:31,NULL,New Customer
+ALMLD-19792,971505247229,NULL,Whatsapp Direct,Service Request / Quotation,1,Opened,service contract ,2025-02-13 23:29:41,NULL,New Customer
+ALMLD-19850,971566888613,NULL,Whatsapp Campaign,Service Request / Quotation,1,Opened,MINOR SERVICE PRICE,2025-02-15 20:50:32,NULL,New Customer
+ALMLD-19896,0506222797,26684-r13,Phone Call,Appointment,5,Lead To Customer,service enquiry ,2025-02-17 22:17:24,NULL,New Customer
+ALMLD-19914,971506447791,NULL,Whatsapp Direct,Service Request / Quotation,1,Opened,  MINOR SERVICE 995+vat ,2025-02-18 02:14:44,NULL,New Customer
+ALMLD-19987,201110222726,NULL,Whatsapp Campaign,Service Request / Quotation,1,Opened,  MINOR SERVICE,2025-02-19 14:50:50,NULL,New Customer
+ALMLD-19993,0503322027,24320-R50,CRE WhatsApp,Appointment,5,Lead To Customer,SERVICE ENQUIRY ,2025-02-19 22:07:41,NULL,New Customer
+ALMLD-20025,0501300431,NIL,Phone Call,Service Request / Quotation,1,Opened, SERVICE ENQUIRY,2025-02-20 04:41:28,NULL,New Customer
+ALMLD-20043,971525653797,NULL,Whatsapp Campaign,Service Request / Quotation,1,Opened,service contract ,2025-02-20 14:08:51,NULL,New Customer
+ALMLD-20074,0504769837,16791-R13,Phone Call,Appointment,5,Lead To Customer,major service ,2025-02-21 03:30:26,NULL,New Customer
+ALMLD-20088,966549969969,NULL,Whatsapp Campaign,Service Request / Quotation,1,Opened,service enquiry ,2025-02-21 22:08:49,NULL,New Customer
+ALMLD-20121,971555211196,,Whatsapp Campaign,General Enquiry,8,Open/Whatsapp,How much for service,2025-02-22 20:31:35,NULL,New Customer
+ALMLD-20139,0504413441,NIL,Phone Call,Service Request / Quotation,1,Opened,major service 120 km 2400+vat ,2025-02-23 02:40:30,NULL,New Customer
+ALMLD-20151,971503030442,NULL,Whatsapp Campaign,Service Request / Quotation,1,Opened,MINOR SERVICE PRICE,2025-02-23 08:49:06,NULL,New Customer
+ALMLD-20156,971508989953,,Whatsapp Campaign,General Enquiry,8,Open/Whatsapp,"How much does it cost for minor service A  E350 2010 mercedes
+And how many hours does it take to finish it",2025-02-23 19:44:02,NULL,New Customer
+ALMLD-20167,0505254544,66644-r11,Phone Call,Appointment,1,Opened,service enquiry ,2025-02-24 21:45:40,NULL,New Customer
+ALMLD-20193,971547010700,NULL,Whatsapp Direct,General Enquiry,6,Closed,enquiry for service contract/but gargash service contract still valid,2025-02-26 01:03:21,NULL,New Customer
+ALMLD-20209,0507117714,NULL,Phone Call,Service Request / Quotation,1,Opened,major service 60 km 2235+tax ,2025-02-27 00:16:48,NULL,New Customer
+ALMLD-20264,0507868600,NULL,Phone Call,Service Request / Quotation,1,Opened,service enquiry ,2025-03-02 01:16:57,C00013523,New Customer
+ALMLD-20355,0504309906,NULL,Phone Call,General Enquiry,6,Closed,CUSTOMER CALLED TO ASK FOR SERVICE CONTRACT/ SHARED DETAILS THROUGH MARKETING CRM NUMBER,2025-03-04 10:47:37,NULL,New Customer
+ALMLD-20360,971504105935,72647-R9,Whatsapp Direct,Service Request / Quotation,1,Opened,  MINOR SERVICE 995+vat ,2025-03-04 22:14:14,NULL,New Customer
+ALMLD-20364,0559296234,71255-R8,Direct Lead,Appointment,6,Closed,SERVICE ENQUIRY ,2025-03-04 22:46:52,NULL,New Customer
+ALMLD-20375,0506995770,55172-r5,Phone Call,Appointment,6,Closed,service enquiry 995+tax ,2025-03-05 02:59:54,NULL,New Customer
+ALMLD-20401,971564645175,,Whatsapp Direct,General Enquiry,8,Open/Whatsapp,Service B can have discount also?,2025-03-05 09:23:16,NULL,New Customer
+ALMLD-20411,971588964283,,Whatsapp Direct,General Enquiry,8,Open/Whatsapp,"Hi,
+
+I have a Japanese Specs S63 2016 and I need to modify the Radio to GCC.
+
+Is the service available?
+How much? 
+
+Thanks",2025-03-05 11:57:15,NULL,New Customer
+ALMLD-20419,0563043013,34657-R10,CRE WhatsApp,Appointment,1,Opened,CAMPAIGN SERVICE 600+TAX,2025-03-05 22:06:23,NULL,New Customer
+ALMLD-20435,971509669748,97612-r19,Whatsapp Direct,Appointment,5,Lead To Customer,full check up + service enquiry ,2025-03-06 00:44:05,NULL,New Customer
+ALMLD-20452,971552007890,NULL,Whatsapp Campaign,Appointment,6,Closed,180k major service B+ need to do amount coming 3090/-+tax=3244.50/- aed with tax,2025-03-06 07:09:47,NULL,New Customer
+ALMLD-20480,971526027950,NULL,Whatsapp Campaign,Service Request / Quotation,1,Opened,  MINOR SERVICE 995+vat ,2025-03-07 00:42:34,NULL,New Customer
+ALMLD-20488,0555641085,30619-R7,SA Direct,Appointment,5,Lead To Customer,service enquiry ,2025-03-07 02:09:11,NULL,New Customer
+ALMLD-20504,971555560344,new,Whatsapp Campaign,Service Request / Quotation,6,Closed,service 2000 ke remaining will come after that ,2025-03-07 11:30:40,NULL,New Customer
+ALMLD-20506,971568019622,NULL,Whatsapp Campaign,Service Request / Quotation,1,Opened,major service 1775+tax,2025-03-07 14:51:35,NULL,New Customer
+ALMLD-20534,0506166550,74709-R4,Phone Call,Appointment,5,Lead To Customer,service enquiry ,2025-03-08 22:20:07,NULL,New Customer
+ALMLD-20557,971544293866,57986-r7,Whatsapp Direct,Appointment,5,Lead To Customer,  MINOR SERVICE,2025-03-09 02:53:05,NULL,New Customer
+ALMLD-20567,971526742652,68175-DXBM,Whatsapp Direct,Appointment,6,Closed,SERVICE A 995 AEM + VAT,2025-03-09 22:10:10,NULL,New Customer
+ALMLD-12192,0506644453,89210-R4,SA Direct,Appointment,5,Lead To Customer,service enquiry ,2025-03-11 06:34:42,NULL,New Customer
+ALMLD-20609,0509039801,65458-R4,Phone Call,Appointment,5,Lead To Customer,service contract ,2025-03-11 23:28:28,NULL,New Customer
+ALMLD-20611,0506695423,NULL,Phone Call,General Enquiry,6,Closed,service contract ,2025-03-12 00:27:36,NULL,New Customer
+ALMLD-14999,0509995612,97958-R50,Phone Call,Appointment,5,Lead To Customer,service enquiry ,2025-03-12 09:02:36,NULL,New Customer
+ALMLD-20632,0561531316,NULL,SA Direct,Appointment,6,Closed,SERVICE ENQUIRY NEED TO CHECK WHICH SERICE THE CAR NEED ,2025-03-13 09:35:12,NULL,New Customer
+ALMLD-20637,0555576701,NULL,Phone Call,Appointment,6,Closed,SERVICE ENQUIRY ,2025-03-13 21:57:53,NULL,New Customer
+ALMLD-12330,0567773888,80445-R7,Phone Call,Appointment,5,Lead To Customer,service enquiry ,2025-03-14 08:33:34,NULL,New Customer
+ALMLD-20656,0542229962,5867-R5,Phone Call,Appointment,6,Closed,service enquiry ,2025-03-14 21:49:07,NULL,New Customer
+ALMLD-20664,0509926999,92373-R6,Phone Call,Appointment,5,Lead To Customer,service enquiry ,2025-03-15 08:42:33,C00014891,New Customer
+ALMLD-20683,0501633605,NULL,Phone Call,Appointment,6,Closed,MINOR SERVICE / NEED TO REPLACE BRAKE PAD ALSO,2025-03-16 00:34:39,NULL,New Customer
+ALMLD-20721,0566106532,72135,Phone Call,Appointment,5,Lead To Customer,service enquiry ,2025-03-18 00:15:49,NULL,New Customer
+ALMLD-20723,0504465105,NULL,Phone Call,Service Request / Quotation,1,Opened,major service ,2025-03-18 01:41:49,NULL,New Customer
+ALMLD-9445,0567500082,98432-R9,Phone Call,Appointment,5,Lead To Customer,GENERAL SERVICE,2025-03-18 08:02:11,NULL,New Customer
+ALMLD-20737,971559014120,82783,Whatsapp Direct,Appointment,6,Closed,  MINOR SERVICE,2025-03-18 12:55:03,NULL,New Customer
+ALMLD-20753,0508060304,23419-R6,Phone Call,Appointment,6,Closed,MAJOR SERVICE,2025-03-19 00:59:33,NULL,New Customer
+ALMLD-20756,0501650502,81362-R13,Phone Call,Appointment,5,Lead To Customer,SERVICE ENQUIRY ,2025-03-19 01:24:18,NULL,New Customer
+ALMLD-20759,971528900222,86272-R21,Whatsapp Direct,Appointment,6,Closed,MAJOR SERVICE AND INSPECTION,2025-03-19 04:06:45,NULL,New Customer
+ALMLD-20760,971509550610,NULL,Whatsapp Direct,Service Request / Quotation,1,Opened,SERVICE A AMOUNT 995 AED + VAT,2025-03-19 04:38:36,NULL,New Customer
+ALMLD-20793,0567777972,NULL,Phone Call,Service Request / Quotation,1,Opened,major service ,2025-03-20 21:49:41,NULL,New Customer
+ALMLD-20801,0545445525,72240,Phone Call,Appointment,5,Lead To Customer, SERVICE ENQUIRY,2025-03-21 00:01:09,NULL,New Customer
+ALMLD-20829,0557405555,54953-R18,Phone Call,Service Request / Quotation,5,Lead To Customer,service enquiry ,2025-03-23 00:18:03,NULL,New Customer
+ALMLD-20830,0503255188,NULL,Phone Call,Service Request / Quotation,1,Opened,service enquiry 1150,2025-03-23 01:25:02,NULL,New Customer
+ALMLD-20851,0567150025,NULL,Phone Call,Appointment,6,Closed,  MINOR SERVICE,2025-03-24 21:46:13,NULL,New Customer
+ALMLD-20865,0567210653,NULL,Phone Call,General Enquiry,6,Closed,CALLER JUST WANTS TO KNOW ABOUT SERVICE PRICE BUT NOT CLEAR ABOUT WHICH SERVICE,2025-03-25 01:25:42,NULL,New Customer
+ALMLD-20872,0502444603,14766-R5,CRE WhatsApp,Appointment,1,Opened,SERVICE ENQUIRY ,2025-03-25 06:35:20,NULL,New Customer
+ALMLD-20930,0562927772,63110-R8,Phone Call,Appointment,5,Lead To Customer,service enquiry ,2025-03-27 06:58:49,NULL,New Customer
+ALMLD-20972,0543388808,34409-R8,Phone Call,Appointment,5,Lead To Customer,MINOR SERVICE NEED THE CAR BY 29 MARCH 3PM,2025-03-28 20:25:36,NULL,New Customer
+ALMLD-13458,0555567550,33210-R15,Phone Call,Appointment,5,Lead To Customer,SERVICE/NEED TO CHECK SUSPENSION,2025-04-02 19:48:45,NULL,New Customer
+ALMLD-21025,0508198005,NULL,Phone Call,Appointment,6,Closed,MAJOR SERVICE,2025-04-02 23:17:41,NULL,New Customer
+ALMLD-21028,971508755455,NULL,Whatsapp Campaign,Service Request / Quotation,1,Opened,  MINOR SERVICE,2025-04-03 00:58:46,NULL,New Customer
+ALMLD-21049,971564888480,NULL,Whatsapp Campaign,Service Request / Quotation,1,Opened,major service price ,2025-04-03 20:17:55,NULL,New Customer
+ALMLD-21052,971559951088,NULL,Whatsapp Campaign,General Enquiry,6,Closed,  MINOR SERVICE,2025-04-03 20:56:15,NULL,New Customer
+ALMLD-21065,971586835808,NULL,Whatsapp Direct,General Enquiry,6,Closed,  MINOR SERVICE,2025-04-03 23:58:21,NULL,New Customer
+ALMLD-21073,971554934657,NULL,Whatsapp Campaign,Service Request / Quotation,1,Opened,  MINOR SERVICE,2025-04-04 03:26:08,NULL,New Customer
+ALMLD-21105,971553335597,NULL,Whatsapp Direct,Service Request / Quotation,1,Opened,MAJOR SERVICE PRICE,2025-04-05 21:14:00,NULL,New Customer
+ALMLD-21111,971508181958,NULL,Whatsapp Direct,Service Request / Quotation,1,Opened,MAJOR SERVICE PRICE,2025-04-06 00:38:15,NULL,New Customer
+ALMLD-21175,971506680600,NULL,Whatsapp Direct,Service Request / Quotation,1,Opened,SERVICE B PRICE,2025-04-08 08:21:35,NULL,New Customer
+ALMLD-21178,971507199719,NULL,Whatsapp Direct,Service Request / Quotation,1,Opened,MAJOR SERVICE - C200,2025-04-08 10:06:59,NULL,New Customer
+ALMLD-13906,0506997200,94921-r16,Phone Call,Appointment,5,Lead To Customer,SERVICE,2025-04-08 20:03:54,NULL,New Customer
+ALMLD-21226,971555389887,NULL,Whatsapp Campaign,Service Request / Quotation,1,Opened,major service 3000+vat ,2025-04-09 04:40:27,NULL,New Customer
+ALMLD-21237,971522466661,NULL,Whatsapp Campaign,Service Request / Quotation,1,Opened,  MINOR SERVICE,2025-04-09 18:33:06,NULL,New Customer
+ALMLD-21243,0563936361,30783-R19,Phone Call,Appointment,6,Closed,service enquiry ,2025-04-09 21:09:33,NULL,New Customer
+ALMLD-21261,0569553863,94182-r50,Phone Call,Appointment,1,Opened,service enquiry ,2025-04-10 03:24:07,NULL,New Customer
+ALMLD-21268,971509917518,NULL,Whatsapp Direct,Service Request / Quotation,1,Opened, SERVICE ENQUIRY,2025-04-10 10:20:18,NULL,New Customer
+ALMLD-21267,971568356208,NULL,Whatsapp Direct,Service Request / Quotation,1,Opened,  MINOR SERVICE,2025-04-10 18:54:15,NULL,New Customer
+ALMLD-21300,0545902222,NULL,Phone Call,Service Request / Quotation,1,Opened,  MINOR SERVICE 995+vat ,2025-04-11 03:57:20,NULL,New Customer
+ALMLD-21302,971507911552,NULL,Whatsapp Direct,Service Request / Quotation,1,Opened,service enquiry ,2025-04-11 04:10:37,NULL,New Customer
+ALMLD-21306,971501954108,NULL,Whatsapp Campaign,Service Request / Quotation,1,Opened,  MINOR SERVICE 995+vat ,2025-04-11 05:05:24,NULL,New Customer
+ALMLD-21309,971505551207,NULL,Whatsapp Campaign,Service Request / Quotation,1,Opened,  MINOR SERVICE 995+vat ,2025-04-11 06:41:51,NULL,New Customer
+ALMLD-21328,971562720151,NULL,Whatsapp Campaign,Service Request / Quotation,1,Opened,service enquiry ,2025-04-12 01:04:13,NULL,New Customer
+ALMLD-21332,971569009013,NULL,Whatsapp Campaign,Service Request / Quotation,1,Opened,  MINOR SERVICE 995+vat ,2025-04-12 02:27:24,NULL,New Customer
+ALMLD-21333,971547334418,NULL,Whatsapp Campaign,Service Request / Quotation,1,Opened,  MINOR SERVICE 995+vat ,2025-04-12 02:29:22,NULL,New Customer
+ALMLD-21334,971506425437,NULL,Whatsapp Campaign,Status Enquiry,6,Closed,  MINOR SERVICE 995+vat ,2025-04-12 03:15:37,NULL,New Customer
+ALMLD-21341,971555449472,NULL,Whatsapp Campaign,Service Request / Quotation,1,Opened,  MINOR SERVICE 995+vat ,2025-04-12 04:48:28,NULL,New Customer
+ALMLD-21353,971564800400,35163-R9,Whatsapp Campaign,Appointment,1,Opened,Minor service 699,2025-04-12 21:26:55,NULL,New Customer
+ALMLD-21361,0563233949, 57262-R6,SA Direct,Appointment,5,Lead To Customer,SERVICE ENQUIRY ,2025-04-13 01:45:31,NULL,New Customer
+ALMLD-21364,971568997817,NULL,Whatsapp Campaign,Service Request / Quotation,1,Opened,major service 1775+tax,2025-04-13 03:11:03,NULL,New Customer
+ALMLD-21368,971501337793,NULL,Whatsapp Direct,Service Request / Quotation,1,Opened,  MINOR SERVICE 995+vat ,2025-04-13 03:56:03,NULL,New Customer
+ALMLD-21377,971504268047,NULL,Whatsapp Campaign,Service Request / Quotation,1,Opened,major service 6300+tax,2025-04-13 16:35:08,NULL,New Customer
+ALMLD-21392,971505884400,NULL,Whatsapp Campaign,Service Request / Quotation,1,Opened,MINOR SERVICE OFFER PRICE GIVEN,2025-04-14 06:10:46,NULL,New Customer
+ALMLD-21394,971581873953,NULL,Whatsapp Campaign,Service Request / Quotation,1,Opened,  MINOR SERVICE 995+vat ,2025-04-14 06:46:25,NULL,New Customer
+ALMLD-21399,971509097191,NULL,Whatsapp Campaign,Service Request / Quotation,1,Opened,service enquiry ,2025-04-14 08:29:18,NULL,New Customer
+ALMLD-21401,971557128157,NULL,Whatsapp Campaign,Service Request / Quotation,1,Opened,SERVICE CONTRACT LEAD,2025-04-14 10:00:04,NULL,New Customer
+ALMLD-21402,971543683381,NULL,Whatsapp Campaign,Service Request / Quotation,1,Opened, SERVICE ENQUIRY,2025-04-14 11:29:37,NULL,New Customer
+ALMLD-21406,0582956848,21259-DXBB,Phone Call,Appointment,5,Lead To Customer,service enquiry 3090,2025-04-14 20:52:28,NULL,New Customer
+ALMLD-21408,0557669657,65811-R19,Phone Call,Appointment,5,Lead To Customer,service enquiry ,2025-04-14 21:01:32,NULL,New Customer
+ALMLD-21416,971585850640,NULL,Whatsapp Campaign,Service Request / Quotation,1,Opened,MAJOR SERVICE 1775++,2025-04-15 00:11:39,NULL,New Customer
+ALMLD-21425,971523030250,NULL,Whatsapp Campaign,Service Request / Quotation,1,Opened,SERVICE ENQUIRY ,2025-04-15 02:54:08,NULL,New Customer
+ALMLD-21435,0508801880,54042-R6,Phone Call,Service Request / Quotation,1,Opened,major service 3754,2025-04-15 05:13:25,NULL,New Customer
+ALMLD-21451,0507890005,NULL,Phone Call,Service Request / Quotation,1,Opened,service contract ,2025-04-15 21:33:00,NULL,New Customer
+ALMLD-21460,05052242888,18724-R6,SA Direct,Appointment,6,Closed,service enquiry ,2025-04-16 03:44:51,NULL,New Customer
+ALMLD-21466,0567775367,55367-R17,Phone Call,Appointment,6,Closed,SERVICE ENQUIRY,2025-04-16 19:04:39,NULL,New Customer
+ALMLD-21474,0569137427,47616-R10,Phone Call,Appointment,5,Lead To Customer,SERVICE ENQUIRY ,2025-04-16 21:17:12,NULL,New Customer
+ALMLD-21476,971552131722,89807,Whatsapp Direct,Service Request / Quotation,5,Lead To Customer,major service 3100,2025-04-16 21:34:50,NULL,New Customer
+ALMLD-21485,971561666151,NULL,Whatsapp Campaign,Service Request / Quotation,1,Opened,minor service ,2025-04-16 23:37:15,NULL,New Customer
+ALMLD-21493,0564010477,98497-R16,Phone Call,Appointment,5,Lead To Customer,MINOR SERVICE ,2025-04-17 04:08:45,NULL,New Customer
+ALMLD-21496,971504447099,NULL,Whatsapp Campaign,Service Request / Quotation,1,Opened,minor service offer 699,2025-04-17 04:18:42,NULL,New Customer
+ALMLD-21510,971555267555,NULL,Whatsapp Campaign,Service Request / Quotation,1,Opened,MINOR SERVICE OFFER/699,2025-04-17 19:59:13,NULL,New Customer
+ALMLD-21522,0559991240,NULL,Phone Call,Service Request / Quotation,1,Opened,major service 120 km 3700+vat ,2025-04-17 22:43:45,NULL,New Customer
+ALMLD-21551,971501636001,NULL,Whatsapp Campaign,Service Request / Quotation,1,Opened,  MINOR SERVICE 995+vat ,2025-04-19 00:55:52,NULL,New Customer
+ALMLD-21570,0549906350,90174-R20,SA Direct,Appointment,5,Lead To Customer,Service A Price given :- 1000+ tax,2025-04-19 20:51:28,NULL,New Customer
+ALMLD-21578,971509904884,NULL,Whatsapp Campaign,Service Request / Quotation,1,Opened,service contract ,2025-04-19 22:09:08,NULL,New Customer
+ALMLD-21584,971527022686,NULL,Whatsapp Campaign,Service Request / Quotation,1,Opened,major service 2800+vat,2025-04-20 04:04:32,NULL,New Customer
+ALMLD-21585,971563877502,NULL,Whatsapp Campaign,Service Request / Quotation,1,Opened,service enquiry ,2025-04-20 04:04:40,NULL,New Customer
+ALMLD-21591,971508533178,NULL,Whatsapp Campaign,Service Request / Quotation,1,Opened,  MINOR SERVICE 995+vat ,2025-04-20 21:05:42,NULL,New Customer
+ALMLD-21600,971509090361,NULL,Whatsapp Campaign,Service Request / Quotation,1,Opened,major service 2075+tax ,2025-04-21 00:10:10,NULL,New Customer
+ALMLD-21606,971588111116,NULL,Whatsapp Campaign,Service Request / Quotation,1,Opened,  MINOR SERVICE,2025-04-21 18:39:54,NULL,New Customer
+ALMLD-21623,0504450093,NIL,Phone Call,Service Request / Quotation,1,Opened,minor service 995+tax ,2025-04-22 00:02:20,NULL,New Customer
+ALMLD-21634,971544650436,NULL,Whatsapp Campaign,Service Request / Quotation,1,Opened,Minor service 699,2025-04-22 02:40:52,NULL,New Customer
+ALMLD-21635,971543216850,NULL,Whatsapp Direct,Service Request / Quotation,1,Opened,MAJOR SERVICE 1775++,2025-04-22 02:55:34,NULL,New Customer
+ALMLD-21640,971509244900,NULL,Whatsapp Campaign,Service Request / Quotation,1,Opened,  MINOR SERVICE 995+vat ,2025-04-22 03:46:38,NULL,New Customer
+ALMLD-21645,971501668804,NULL,Whatsapp Campaign,Service Request / Quotation,1,Opened,service contract ,2025-04-22 06:42:12,NULL,New Customer
+ALMLD-21657,971505722228,NULL,Whatsapp Campaign,Service Request / Quotation,1,Opened,MAJOR SERVICE 1775++,2025-04-22 19:44:37,NULL,New Customer
+ALMLD-21670,504000127,7114-R7,SA Direct,Appointment,5,Lead To Customer,service enquiry ,2025-04-22 22:28:36,NULL,New Customer
+ALMLD-21699,0506114399,6892-R7,Phone Call,Appointment,1,Opened,service enquiry ,2025-04-23 23:34:20,NULL,New Customer

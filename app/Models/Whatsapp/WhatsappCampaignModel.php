@@ -1,20 +1,20 @@
 <?php
 
-namespace App\Models\Leads;
+namespace App\Models\Whatsapp;
 
 use CodeIgniter\Model;
 
-class AppointmentMasterModel extends Model
+class WhatsappCampaignModel extends Model
 {
     protected $DBGroup          = 'default';
-    protected $table            = 'appointment_master';
-    protected $primaryKey       = 'apptm_id';
+    protected $table            = 'alm_whatsapp_campaign';
+    protected $primaryKey       = 'id';
     protected $useAutoIncrement = true;
     protected $insertID         = 0;
     protected $returnType       = 'array';
     protected $useSoftDeletes   = false;
     protected $protectFields    = true;
-    protected $allowedFields    = ['apptm_id', 'apptm_code', 'apptm_customer_code', 'apptm_diss_id', 'apptm_lead_id', 'apptm_status', 'apptm_transport_service', 'apptm_created_on', 'apptm_created_by', 'apptm_updated_on', 'apptm_updated_by', 'apptm_delete_flag', 'apptm_type', 'apptm_group', 'apptm_pickup_mode', 'apptm_alternate_no'];
+    protected $allowedFields    = ['alm_wb_camp_id','alm_wb_camp_name','alm_wb_camp_type','alm_wb_camp_cust_count','alm_wb_camp_date_from','alm_wb_camp_date_to','alm_wb_camp_created_by','alm_wb_camp_created_on','alm_wb_camp_delete_flag'];
 
     // Dates
     protected $useTimestamps = false;
