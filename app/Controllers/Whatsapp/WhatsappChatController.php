@@ -4968,8 +4968,8 @@ Al Maraghi Independent Mercedes Benz Service Centre Dubai",
         foreach ($customers as $cust) {
 
             $phone = !empty($cust['MOBILE']) ? $cust['MOBILE'] : $cust['PHONE'];
-            $last9Digits = substr($phone, -10);
-            $whatsappNumber = '91' . $last9Digits;
+            $last9Digits = substr($phone, -9);
+            $whatsappNumber = '971' . $last9Digits;
 
             $templateName = "";
             $alm_wb_msg_content = "";
@@ -5134,7 +5134,7 @@ www.benzuae.com
                     $wb_customer = new WhatsappCustomerMasterModel();
                     $wb_message = new WhatsappCustomerMessageModel();
 
-                    $msg_customer = $wb_customer->where('SUBSTRING(wb_cus_mobile, -10)', $last9Digits)->first();
+                    $msg_customer = $wb_customer->where('SUBSTRING(wb_cus_mobile, -9)', $last9Digits)->first();
 
                     if (!$msg_customer) {
                         $tracker_data = [

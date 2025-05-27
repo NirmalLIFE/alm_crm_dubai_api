@@ -33,7 +33,7 @@ class Login extends ResourceController
             'password' => 'required',
         ];
         if (!$this->validate($rules)) return $this->fail($this->validator->getErrors());
-        $res = $model->where('us_email', $this->request->getVar('email'))->first();
+        $res = $model->where('us_email', $this->request->getVar('email'))->where('us_status_flag', 0)->first();
         if (!$res) {
             $response = [
                 'ret_data' => 'fail',

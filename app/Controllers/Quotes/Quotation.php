@@ -124,7 +124,7 @@ class Quotation extends ResourceController
             return $this->fail($data, 400);
         }
         if ($tokendata) {
-            $res = $modelQ->select('qt_id,qt_code,qt_type,qt_cus_name,qt_cus_contact,qt_vin,qt_reg_no,qt_chasis,qt_make,qt_odometer,qt_service_adv,qt_parts_adv,qt_jc_no,qt_cus_id,qt_lead_id,qt_type,qt_amount,qt_tax,qt_total,part_code_print,avail_print,part_type_print,brand_print,qt_camp_id,sau.us_firstname as sa_name,sau.us_email as sa_email,pau.us_firstname as pa_name,pau.us_email as pa_email,qt_vehicle_value')
+            $res = $modelQ->select('qt_id,qt_code,qt_type,qt_cus_name,qt_cus_contact,qt_vin,qt_reg_no,qt_chasis,qt_make,qt_odometer,qt_service_adv,qt_parts_adv,qt_jc_no,qt_cus_id,qt_lead_id,qt_type,qt_amount,qt_tax,qt_total,part_code_print,avail_print,part_type_print,brand_print,qt_camp_id,sau.us_firstname as sa_name,sau.us_email as sa_email,pau.us_firstname as pa_name,pau.us_email as pa_email,qt_vehicle_value,qt_margin_flag')
                 ->where('qt_id', $id)
                 ->where('qt_delete_flag', 0)
                 ->join('users sau', 'sau.us_id=qt_service_adv', 'left')
@@ -577,7 +577,7 @@ class Quotation extends ResourceController
 
             // return $this->respond($new_sa_id, 200);
 
-            if ($new_sa_id != '0') {
+            if ($new_sa_id != '0' && $new_sa_id != '') {
                 $usmodel = new UserModel();
                 $name = $usmodel->select('us_firstname')->where('us_id', $new_sa_id)->get()->getRow()->us_firstname;
             } else {
@@ -631,6 +631,7 @@ class Quotation extends ResourceController
                 'avail_print' => $this->request->getVar('avail_print'),
                 'part_code_print' => $this->request->getVar('part_code_print'),
                 'qt_service_adv' => $this->request->getVar('qt_service_adv'),
+                'qt_margin_flag' => $this->request->getVar('marginFlag') == true ? 1 : 0,
             ];
             $res = $modelQ->update($this->request->getVar('qt_id'), $data);
             if ($res) {
@@ -698,6 +699,8 @@ class Quotation extends ResourceController
                                         'qit_discount' => 0,
                                         'qit_created_by' => $tokendata['uid'],
                                         'qit_delete_flag' => $part_type->qit_delete_flag,
+                                        'qit_old_margin_price' => $part_type->old_margin_total,
+                                        'qit_margin_price' => $part_type->margin_total,
                                     );
                                 }
                             }
@@ -738,6 +741,8 @@ class Quotation extends ResourceController
                                     'qit_type' => $part_type->qit_type,
                                     'qit_availability' => $part_type->qit_availability,
                                     'qit_unit_price' => $part_type->qit_unit_price,
+                                    'qit_old_margin_price' => $part_type->old_margin_total,
+                                    'qit_margin_price' => $part_type->margin_total,
                                     'qit_discount' => 0,
                                     'qit_created_by' => $tokendata['uid'],
                                     'qit_delete_flag' => $part_type->qit_delete_flag,
@@ -1053,7 +1058,11 @@ class Quotation extends ResourceController
                                 'qtvi_qtv_item_id' => $line_item->item_id,
                                 'qtvi_qtv_item_price_type' => $line_item->qit_id != null ? $line_item->qit_id : 0,
                                 'qtvi_qtv_item_qty' => $line_item->item_qty,
-                                'qtvi_qtv_item_price' => $line_item->qtvi_qtv_item_price,
+                                'qtvi_qtv_item_price' => (!empty($line_item->qit_margin_price)
+                                    && $line_item->qit_margin_price != 0
+                                    && $this->request->getVar("qt_margin_flag"))
+                                    ? $line_item->qit_margin_price / $line_item->item_qty
+                                    : $line_item->qtvi_qtv_item_price,
                                 'qtvi_item_group' => $line_item->item_group,
                                 'qtvi_created_by' => $tokendata['uid'],
                                 'qtvi_updated_by' => $tokendata['uid'],

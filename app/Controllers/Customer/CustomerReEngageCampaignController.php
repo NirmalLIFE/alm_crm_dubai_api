@@ -123,8 +123,8 @@ class CustomerReEngageCampaignController extends ResourceController
             $row = $query->getRow();
 
             if ($row) {
-                // $this->sendServiceRemainderCampaignMessages($row->first_service_remainder_days);
-                // $this->sendServiceRemainderCampaignMessages($row->second_service_remainder_days);
+                $this->sendServiceRemainderCampaignMessages($row->first_service_remainder_days);
+                $this->sendServiceRemainderCampaignMessages($row->second_service_remainder_days);
                 $this->sendServiceRemainderCampaignMessages($row->third_service_remainder_days);
             }
         }
@@ -202,54 +202,54 @@ class CustomerReEngageCampaignController extends ResourceController
             }
         }
 
-        log_message('error', "Log filteredResponse on cron job {$type}: " . json_encode($filteredResponse));
+        // log_message('error', "Log filteredResponse on cron job {$type}: " . json_encode($filteredResponse));
 
 
-        $customers = [
-            // [
-            //     'CUSTOMER_NAME' => 'Nirmal',
-            //     'PHONE' => '',
-            //     'MOBILE' => '918138055705',
-            //     'CAR_REG_NO' => '8801-R8',
-            //     'SPEEDOMETER_READING' => '12500',
-            // ],
-            // [
-            //     'CUSTOMER_NAME' => 'Arun',
-            //     'PHONE' => '918921529689',
-            //     'MOBILE' => '918921529689',
-            //     'CAR_REG_NO' => '9502-R88',
-            //     'SPEEDOMETER_READING' => '30500',
-            // ],
-            [
-                'CUSTOMER_NAME' => 'Aby',
-                'PHONE' => '919744608229',
-                'CAR_REG_NO' => '9603-R99',
-                'SPEEDOMETER_READING' => '40500',
-            ],
-            [
-                'CUSTOMER_NAME' => 'Yadu',
-                'PHONE' => '918330039403',
-                'CAR_REG_NO' => '9704-R76',
-                'SPEEDOMETER_READING' => '25500',
-            ],
-            // [
-            //     'CUSTOMER_NAME' => 'Arjun',
-            //     'PHONE' => '91628200214',
-            //     'CAR_REG_NO' => '9905-R23',
-            //     'SPEEDOMETER_READING' => '24500',
-            // ],
-            // [
-            //     'CUSTOMER_NAME' => 'Arjun Biju',
-            //     'PHONE' => '919072843160',
-            //     'CAR_REG_NO' => '9910-R56',
-            //     'SPEEDOMETER_READING' => '25000',
-            // ]
-        ];
+        // $customers = [
+        //     [
+        //         'CUSTOMER_NAME' => 'Nirmal',
+        //         'PHONE' => '',
+        //         'MOBILE' => '918138055705',
+        //         'CAR_REG_NO' => '8801-R8',
+        //         'SPEEDOMETER_READING' => '12500',
+        //     ],
+        //     // [
+        //     //     'CUSTOMER_NAME' => 'Arun',
+        //     //     'PHONE' => '918921529689',
+        //     //     'MOBILE' => '918921529689',
+        //     //     'CAR_REG_NO' => '9502-R88',
+        //     //     'SPEEDOMETER_READING' => '30500',
+        //     // ],
+        //     // [
+        //     //     'CUSTOMER_NAME' => 'Aby',
+        //     //     'PHONE' => '919744608229',
+        //     //     'CAR_REG_NO' => '9603-R99',
+        //     //     'SPEEDOMETER_READING' => '40500',
+        //     // ],
+        //     // [
+        //     //     'CUSTOMER_NAME' => 'Yadu',
+        //     //     'PHONE' => '918330039403',
+        //     //     'CAR_REG_NO' => '9704-R76',
+        //     //     'SPEEDOMETER_READING' => '25500',
+        //     // ],
+        //     // [
+        //     //     'CUSTOMER_NAME' => 'Arjun',
+        //     //     'PHONE' => '91628200214',
+        //     //     'CAR_REG_NO' => '9905-R23',
+        //     //     'SPEEDOMETER_READING' => '24500',
+        //     // ],
+        //     // [
+        //     //     'CUSTOMER_NAME' => 'Arjun Biju',
+        //     //     'PHONE' => '919072843160',
+        //     //     'CAR_REG_NO' => '9910-R56',
+        //     //     'SPEEDOMETER_READING' => '25000',
+        //     // ]
+        // ];
 
 
-        $messages = $WhatsappChatController->sendCustomerServiceReminderCampaignMessage($customers, $type);
+        // $messages = $WhatsappChatController->sendCustomerServiceReminderCampaignMessage($customers, $type);
 
-        // $messages = $WhatsappChatController->sendCustomerServiceReminderCampaignMessage($curlResponse['data']['data'], $type);
+        $messages = $WhatsappChatController->sendCustomerServiceReminderCampaignMessage($curlResponse['data']['data'], $type);
 
         // return $this->respond($response, 200);
     }
