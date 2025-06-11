@@ -119,13 +119,26 @@ class WhatsappChatController extends ResourceController
                         ];
                         $isNonWorkingHours = true; // Default to non-working
 
-                        // Check for Sunday timings (fully closed)
-                        if ($currentDayOfWeek == 0) {
+                        $nonWorkingDates = [
+                            '2025-06-05',
+                            '2025-06-06',
+                            '2025-06-07',
+                            '2025-06-08'
+                        ];
+
+                        // ✅ Step 1: Check if it's a non-working holiday date
+                        if (in_array($currentDate, $nonWorkingDates)) {
                             $isNonWorkingHours = true;
+
+                            // ✅ Step 2: Check if it's Sunday
+                        } elseif ($currentDayOfWeek == 0) {
+                            $isNonWorkingHours = true;
+
+                            // ✅ Step 3: Check if within allowed time slots for weekdays
                         } else {
                             foreach ($workingHours as $days => $timeSlots) {
                                 if (
-                                    ($days === 'Monday-Saturday' && ($currentDayOfWeek >= 1 && $currentDayOfWeek <= 4) || $currentDayOfWeek == 6) ||
+                                    ($days === 'Monday-Saturday' && ($currentDayOfWeek >= 1 && $currentDayOfWeek <= 4 || $currentDayOfWeek == 6)) ||
                                     ($days === 'Friday' && $currentDayOfWeek == 5)
                                 ) {
                                     foreach ($timeSlots as [$start, $end]) {
@@ -903,30 +916,55 @@ class WhatsappChatController extends ResourceController
                                         'wb_cus_reminder' => 6,  //Non Working Hours Appointment
                                     ];
                                     $wb_customer->where('wb_cus_id', $msg_customer['wb_cus_id'])->set($tracker_reminder_data)->update();
-                                } else if ($message['interactive']['button_reply']['id'] == 'chat_with_us') {
+                                } else if ($message['interactive']['button_reply']['id'] == 'view_working_hours') {
                                     $awayData = [
                                         "alm_wb_msg_source"   => "2",
                                         "alm_wb_msg_staff_id" => "18",
                                         "alm_wb_msg_type"     => "4",
-                                        "alm_wb_msg_content" => "We are currently unavailable but will get back to you during our working hours.\n
-Working Hours:\n
-Monday to Thursday & Saturday:\n⏰ *8:30 AM to 7:00 PM*\n
-Friday:\n⏰ *8:30 AM to 12:30 PM*\n⏰ *2:30 PM to 7:00 PM*",
+                                        "alm_wb_msg_content" => "Working Hours:\n\nMonday to Thursday & Saturday:\n⏰ *8:30 AM to 7:00 PM*\n\nFriday:\n⏰ *8:30 AM to 12:30 PM*\n⏰ *2:30 PM to 7:00 PM*",
                                         "alm_wb_msg_status"   => 1,
                                         "alm_wb_msg_customer" => $msg_customer['wb_cus_id'],
                                         "alm_wb_msg_mobile"   => $contact['wa_id'],
                                     ];
 
-                                    $awayMessaged = $wb_message->where('alm_wb_msg_customer', $wb_cus_id)
-                                        ->like('alm_wb_msg_content', "We are currently unavailable")
-                                        ->where('alm_wb_msg_created_on >=', $timeAgo)
-                                        ->orderBy('alm_wb_msg_id', 'DESC')
-                                        ->first();
+                                    $this->sendAwayMessageToCustomer($awayData);
+                                } else if ($message['interactive']['button_reply']['id'] == 'leave_message') {
+                                    $awayData = [
+                                        "alm_wb_msg_source"   => "2",
+                                        "alm_wb_msg_staff_id" => "18",
+                                        "alm_wb_msg_type"     => "4",
+                                        "alm_wb_msg_content" => "💬 You can leave your message below.\n\n📝 Please include any relevant details such as the service you need, preferred timing, or your vehicle details. This will help us assist you more efficiently.\n\n⏰ One of our team members will get back to you during working hours.\n\n *Thank you for your patience!*",
+                                        "alm_wb_msg_status"   => 1,
+                                        "alm_wb_msg_customer" => $msg_customer['wb_cus_id'],
+                                        "alm_wb_msg_mobile"   => $contact['wa_id'],
+                                    ];
 
-                                    if ($awayMessaged) {
-                                        $this->sendAwayMessageToCustomer($awayData);
-                                    }
+                                    $this->sendLeaveAMessageToCustomer($awayData);
                                 }
+                                //                                 else if ($message['interactive']['button_reply']['id'] == 'chat_with_us') {
+                                //                                     $awayData = [
+                                //                                         "alm_wb_msg_source"   => "2",
+                                //                                         "alm_wb_msg_staff_id" => "18",
+                                //                                         "alm_wb_msg_type"     => "4",
+                                //                                         "alm_wb_msg_content" => "We are currently unavailable but will get back to you during our working hours.\n
+                                // Working Hours:\n
+                                // Monday to Thursday & Saturday:\n⏰ *8:30 AM to 7:00 PM*\n
+                                // Friday:\n⏰ *8:30 AM to 12:30 PM*\n⏰ *2:30 PM to 7:00 PM*",
+                                //                                         "alm_wb_msg_status"   => 1,
+                                //                                         "alm_wb_msg_customer" => $msg_customer['wb_cus_id'],
+                                //                                         "alm_wb_msg_mobile"   => $contact['wa_id'],
+                                //                                     ];
+
+                                //                                     $awayMessaged = $wb_message->where('alm_wb_msg_customer', $wb_cus_id)
+                                //                                         ->like('alm_wb_msg_content', "We are currently unavailable")
+                                //                                         ->where('alm_wb_msg_created_on >=', $timeAgo)
+                                //                                         ->orderBy('alm_wb_msg_id', 'DESC')
+                                //                                         ->first();
+
+                                //                                     if ($awayMessaged) {
+                                //                                         $this->sendAwayMessageToCustomer($awayData);
+                                //                                     }
+                                //                                 }
                             } else if ($message['interactive']['type'] == 'list_reply') {
                                 if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $message['interactive']['list_reply']['id'])) {
                                     // log_message('error',  "Ready to create an appointment");
@@ -1101,11 +1139,11 @@ Friday:\n⏰ *8:30 AM to 12:30 PM*\n⏰ *2:30 PM to 7:00 PM*",
                                 $currentDateTime = new DateTime();
                                 // Calculate the difference in hours
                                 $interval = $leadCreatedDateTime->diff($currentDateTime);
-                                log_message('error',  "currentDateTime" . json_encode($currentDateTime));
-                                log_message('error',  "leadCreatedDateTime" . json_encode($leadCreatedDateTime));
+                                // log_message('error',  "currentDateTime" . json_encode($currentDateTime));
+                                // log_message('error',  "leadCreatedDateTime" . json_encode($leadCreatedDateTime));
                                 $hoursDifference = ($interval->days * 24) + $interval->h;
-                                log_message('error',  "hoursDifference" . json_encode($hoursDifference));
-                                log_message('error',  "reOpenHours" . json_encode($reOpenHours));
+                                // log_message('error',  "hoursDifference" . json_encode($hoursDifference));
+                                // log_message('error',  "reOpenHours" . json_encode($reOpenHours));
                             }
 
                             // Get the current date and time
@@ -4968,8 +5006,8 @@ Al Maraghi Independent Mercedes Benz Service Centre Dubai",
         foreach ($customers as $cust) {
 
             $phone = !empty($cust['MOBILE']) ? $cust['MOBILE'] : $cust['PHONE'];
-            $last9Digits = substr($phone, -9);
-            $whatsappNumber = '971' . $last9Digits;
+            $last9Digits = substr($phone, -10);
+            $whatsappNumber = '91' . $last9Digits;
 
             $templateName = "";
             $alm_wb_msg_content = "";
@@ -5134,7 +5172,7 @@ www.benzuae.com
                     $wb_customer = new WhatsappCustomerMasterModel();
                     $wb_message = new WhatsappCustomerMessageModel();
 
-                    $msg_customer = $wb_customer->where('SUBSTRING(wb_cus_mobile, -9)', $last9Digits)->first();
+                    $msg_customer = $wb_customer->where('SUBSTRING(wb_cus_mobile, -10)', $last9Digits)->first();
 
                     if (!$msg_customer) {
                         $tracker_data = [
@@ -5542,17 +5580,28 @@ www.benzuae.com
         $i = 0;
         $daysAdded = 0;
 
+        // List of dates to exclude (in Y-m-d format)
+        $excludedDates = [
+            '2025-06-05',
+            '2025-06-06',
+            '2025-06-07',
+            '2025-06-08'
+        ];
+
         while ($daysAdded < 7) { // Iterate until we get 7 valid days
             $date = clone $startDateObj;
             $date->modify("+$i day");
 
-            if ($date->format("w") != 0) { // Exclude Sundays (0 = Sunday)
+            $formattedDate = $date->format("Y-m-d");
+
+            if ($date->format("w") != 0 && !in_array($formattedDate, $excludedDates)) {
                 $dateRows[] = [
-                    "id" => $date->format("Y-m-d"),
+                    "id" => $formattedDate,
                     "title" => $date->format("l, Y-m-d") // Include day name (e.g., Monday, 2024-02-26)
                 ];
-                $daysAdded++; // Increment only if not Sunday
+                $daysAdded++; // Increment only if not Sunday and not excluded
             }
+
             $i++; // Always increment to check the next day
         }
 
@@ -7538,8 +7587,11 @@ If you’d like to update it, feel free to reach out! 😊📲";
             "type" => "interactive",
             "interactive" => array(
                 "type" => "button",
+                // "body" => array(
+                //     "text" => "Thank you for reaching out! We're currently unavailable, but we’ll get back to you soon.\nIn the meantime, please select an option below:"
+                // ),
                 "body" => array(
-                    "text" => "Thank you for reaching out! We're currently unavailable, but we’ll get back to you soon.\nIn the meantime, please select an option below:"
+                    "text" => "Thank you for reaching out to *Al Maraghi Auto Repairs – Dubai*!\n\nWe are currently unavailable as we are on an Eid holiday.\n\nWe will reopen on Monday June 9th and will get back to you as soon as possible.\n\nAl Maraghi wishing you and your loved ones a joyous and blessed Eid! 🌙✨"
                 ),
                 "footer" => array(
                     "text" => "Tap an option to respond."
@@ -7556,10 +7608,17 @@ If you’d like to update it, feel free to reach out! 😊📲";
                         array(
                             "type" => "reply",
                             "reply" => array(
-                                "id" => "chat_with_us",
-                                "title" => "💬 Chat with Us"
+                                "id" => "leave_message",
+                                "title" => "💬 Leave a Message"
                             )
-                        )
+                        ),
+                        array(
+                            "type" => "reply",
+                            "reply" => array(
+                                "id" => "view_working_hours",
+                                "title" => "🕒 View Working Hours"
+                            )
+                        ),
                     )
                 )
             )
@@ -7726,6 +7785,83 @@ If you’d like to update it, feel free to reach out! 😊📲";
 
             $response = [
                 'ret_data' => 'success',
+            ];
+            return $this->respond($response, 200);
+        }
+    }
+
+    public function sendLeaveAMessageToCustomer($data)
+    {
+        $common = new Common();
+        $wb_message = new WhatsappCustomerMessageModel();
+        $wb_customer = new WhatsappCustomerMasterModel();
+
+        // log_message('error',  "sendAwayMessageToCustomer 1111");
+
+
+        // Use $data['alm_wb_msg_mobile'] instead of $this->request->getVar("alm_wb_msg_mobile")
+        $messageData = array(
+            "messaging_product" => "whatsapp",
+            "to" => $data['alm_wb_msg_mobile'],
+            "type" => "text",
+            'text' => [
+                'body' => $data['alm_wb_msg_content']
+            ]
+        );
+        $returnMsg = $common->sendCustomerWhatsappMessage($messageData, '971509766075');
+        if (isset($returnMsg->messages)) {
+            if ($returnMsg->messages[0]->id != "") {
+                log_message('error', 'Webhook Error: ' . $returnMsg->messages[0]->id);
+                $message_data = [
+                    'alm_wb_msg_master_id' => $returnMsg->messages[0]->id,
+                    'alm_wb_msg_source' => 2,
+                    'alm_wb_msg_type' => $data['alm_wb_msg_type'],
+                    'alm_wb_msg_content' => $data['alm_wb_msg_content'],
+                    'alm_wb_msg_status' => $data['alm_wb_msg_status'],
+                    'alm_wb_msg_customer' => $data['alm_wb_msg_customer'],
+                    'alm_wb_msg_reply_id' => '',
+                    'alm_wb_msg_created_on' => date("Y-m-d H:i:s.u"),
+                    'alm_wb_msg_updated_on' => date("Y-m-d H:i:s.u"),
+                    'alm_wb_msg_staff_id' => 1,
+                ];
+                $result = $wb_message->insert($message_data);
+                $mobile = $data['alm_wb_msg_mobile'];
+                $currentFollowUp = $wb_customer->where('wb_cus_mobile', $mobile)->select('wb_cus_follow_up')->first();
+                if ($currentFollowUp) {
+                    $followUpCount = $currentFollowUp['wb_cus_follow_up'];
+                    if ($followUpCount < 3 && $followUpCount != 1 && $followUpCount != 0) {
+                        $followUpCount++;
+                    } else if ($followUpCount == 3) {
+                        $followUpCount = 6;
+                    } else if ($followUpCount == 1) {
+                        $followUpCount = 2;
+                    }
+                    $tracker_data = [
+                        'wb_cus_follow_up' => $followUpCount,
+                        'wb_cus_follow_up_time' => date('Y-m-d H-i-s'),
+                    ];
+                    $wb_customer->where('wb_cus_mobile', $mobile)->set($tracker_data)->update();
+                }
+                if ($result) {
+                    $response = [
+                        'ret_data' => 'success',
+                    ];
+                    return $this->respond($response, 200);
+                } else {
+                    $response = [
+                        'ret_data' => 'fail',
+                    ];
+                    return $this->respond($response, 200);
+                }
+            } else {
+                $response = [
+                    'ret_data' => 'fail',
+                ];
+                return $this->respond($response, 200);
+            }
+        } else {
+            $response = [
+                'ret_data' => $returnMsg,
             ];
             return $this->respond($response, 200);
         }

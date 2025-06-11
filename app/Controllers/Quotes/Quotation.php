@@ -65,7 +65,7 @@ class Quotation extends ResourceController
             return $this->fail($data, 400);
         }
         if ($tokendata) {
-            $res = $modelQ->select('qt_id,qt_code,qt_cus_name,qt_cus_contact,qt_vin,qt_reg_no,qt_chasis,qt_make,qt_odometer,qt_service_adv,qt_parts_adv,qt_jc_no,qt_cus_id,qt_lead_id,qt_type,qt_amount,qt_tax,qt_total,sau.us_firstname as sa_name,sau.us_email as sa_email,pau.us_firstname as pa_name,pau.us_email as pa_email')
+            $res = $modelQ->select('qt_id,qt_code,qt_cus_name,qt_cus_contact,qt_vin,qt_reg_no,qt_chasis,qt_make,qt_odometer,qt_service_adv,qt_parts_adv,qt_jc_no,qt_cus_id,qt_lead_id,qt_type,qt_amount,qt_tax,qt_total,sau.us_firstname as sa_name,sau.us_email as sa_email,pau.us_firstname as pa_name,pau.us_email as pa_email,qt_margin_flag')
                 ->where('qt_delete_flag', 0)
                 ->where('qt_type', 1)
                 ->join('users sau', 'sau.us_id=qt_service_adv', 'left')
