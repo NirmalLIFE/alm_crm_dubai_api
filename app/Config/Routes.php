@@ -390,8 +390,8 @@ $routes->post('checkSocialMediaCampaign', "SocialMediaCampaign/SocialMediaCampai
 $routes->post('socialMediaCampaignDelete', "SocialMediaCampaign/SocialMediaCampaignController::socialMediaCampaignDelete", ['filter' => 'authFilter']);
 $routes->post('getActiveSocialMediaCampaigns', "SocialMediaCampaign/SocialMediaCampaignController::getActiveSocialMediaCampaigns", ['filter' => 'authFilter']);
 $routes->post('updateAppointmentRegNo', "Leads/Appointment::updateAppointmentRegNo", ['filter' => 'authFilter']);
-$routes->post('socialMediaCampaignDetailsFetch',"SocialMediaCampaign/SocialMediaCampaignController::socialMediaCampaignDetailsfetch", ['filter' => 'authFilter']);
-$routes->post('getLatestJobCard',"Leads/Appointment::getLatestJobCard", ['filter' => 'authFilter']);
+$routes->post('socialMediaCampaignDetailsFetch', "SocialMediaCampaign/SocialMediaCampaignController::socialMediaCampaignDetailsfetch", ['filter' => 'authFilter']);
+$routes->post('getLatestJobCard', "Leads/Appointment::getLatestJobCard", ['filter' => 'authFilter']);
 $routes->post('getWhatsappLeadsList', "Leads/Lead::getWhatsappLeadsList", ['filter' => 'authFilter']);
 $routes->post('getQuoteLogs', "Quotes/Quotation::getQuoteLogs", ['filter' => 'authFilter']);
 $routes->post('forwardWhatsappMessage', "Whatsapp/WhatsappChatController::forwardWhatsappMessage", ['filter' => 'authFilter']);
@@ -431,6 +431,57 @@ $routes->post('getAppointmentCustomersFromSRC', "Customer/CustomerReEngageCampai
 $routes->post('updateWhatsappAutoMessageHours', "Whatsapp/WhatsappChatController::updateWhatsappAutoMessageHours", ['filter' => 'authFilter']);
 
 
+
+// service packages Route
+$routes->resource('ServicePackage/ServicePackageController', ['filter' => 'authFilter']);
+$routes->post('getServicePackage', "ServicePackage/ServicePackageController::getServicePackage", ['filter' => 'authFilter']);
+$routes->post('getPartsForEngineNo', "ServicePackage/ServicePackageController::getPartsForEngineNo", ['filter' => 'authFilter']);
+$routes->post('getEngineAndSparesByModelCode', "ServicePackage/ServicePackageController::getEngineAndSparesByModelCode", ['filter' => 'authFilter']);
+$routes->post('saveServicePackageLabours', "ServicePackage/ServicePackageController::saveServicePackageLabours", ['filter' => 'authFilter']);
+$routes->post('getESLByModelCode', "ServicePackage/ServicePackageController::getESLByModelCode", ['filter' => 'authFilter']);
+$routes->get('getSPkilometer', "ServicePackage/ServicePackageController::getSPkilometer", ['filter' => 'authFilter']);
+$routes->post('saveSPKM', "ServicePackage/ServicePackageController::saveSPKM", ['filter' => 'authFilter']);
+$routes->get('getModelCodes', "ServicePackage/ServicePackageController::getModelCodes", ['filter' => 'authFilter']);
+$routes->post('setSPSessionLock', "ServicePackage/ServicePackageController::setSPSessionLock", ['filter' => 'authFilter']);
+$routes->post('checkSPSessionLock', "ServicePackage/ServicePackageController::checkSPSessionLock", ['filter' => 'authFilter']);
+// $routes->get('getAllEnginesList', "ServicePackage/ServicePackageController::getAllEnginesList", ['filter' => 'authFilter']);
+$routes->get('getAllPartsDetails', "ServicePackage/ServicePackageController::getAllPartsDetails", ['filter' => 'authFilter']);
+$routes->post('checkPartPrice', "ServicePackage/ServicePackageController::checkPartPrice", ['filter' => 'authFilter']);
+$routes->get('getServicePackageParts', "ServicePackage/ServicePackageController::getServicePackageParts", ['filter' => 'authFilter']);
+// $routes->post('createServicePackageParts', "ServicePackage/ServicePackageController::createServicePackageParts", ['filter' => 'authFilter']);
+$routes->post('getServicePackagePartsById', "ServicePackage/ServicePackageController::getServicePackagePartsById", ['filter' => 'authFilter']);
+$routes->post('updateServicePackagePartsById', "ServicePackage/ServicePackageController::updateServicePackagePartsById", ['filter' => 'authFilter']);
+$routes->post('deleteServicePackagePartsById', "ServicePackage/ServicePackageController::deleteServicePackagePartsById", ['filter' => 'authFilter']);
+$routes->post('getSPByKm', "ServicePackage/ServicePackageController::getSPByKm", ['filter' => 'authFilter']);
+$routes->post('saveServicePackageKmPriceMap', "ServicePackage/ServicePackageController::saveServicePackageKmPriceMap", ['filter' => 'authFilter']);
+$routes->resource('ServicePackage/ServicePackageMCLabour', ['filter' => 'authFilter']);
+$routes->post('getDraftItems', "ServicePackage/ServicePackageController::getDraftItems", ['filter' => 'authFilter']);
+$routes->post('checkDuplicateOrdering', "ServicePackage/ServicePackageController::checkDuplicateOrdering", ['filter' => 'authFilter']);
+$routes->post('getConsumablePrice', "ServicePackage/ServicePackageController::getConsumablePrice", ['filter' => 'authFilter']);
+$routes->post('createItemGroup', "ServicePackage/ServicePackageController::createItemGroup", ['filter' => 'authFilter']);
+$routes->post('CheckItemHasGroup', "ServicePackage/ServicePackageController::CheckItemHasGroup", ['filter' => 'authFilter']);
+$routes->post('getSPItemsById', "ServicePackage/ServicePackageController::getSPItemsById", ['filter' => 'authFilter']);
+$routes->post('updateSPGroupById', "ServicePackage/ServicePackageController::updateSPGroupById", ['filter' => 'authFilter']);
+$routes->post('checkDuplicateModelCode', "ServicePackage/ServicePackageController::checkDuplicateModelCode", ['filter' => 'authFilter']);
+$routes->post('getServicePackageByVin', "ServicePackage/ServicePackageController::getServicePackageByVin", ['filter' => 'authFilter']);
+$routes->post('getSpareForEngineNo', "ServicePackage/ServicePackageController::getSpareForEngineNo", ['filter' => 'authFilter']);
+$routes->post('checkEngineHasSameSPItems', "ServicePackage/ServicePackageController::checkEngineHasSameSPItems", ['filter' => 'authFilter']);
+$routes->post('getPricesForEngNo', "ServicePackage/ServicePackageController::getPricesForEngNo", ['filter' => 'authFilter']);
+$routes->resource('ServicePackage/ServicePackageItemsMaster', ['filter' => 'authFilter']);
+$routes->post('returnToSupervisor', "ServicePackage/ServicePackageController::returnToSupervisor", ['filter' => 'authFilter']);
+$routes->post('getServicePackageByModelCode', "ServicePackage/ServicePackageController::getServicePackageByModelCode", ['filter' => 'authFilter']);
+$routes->get('getServicePkgModelcodelist', 'ServicePackage/ServicePackageController::getModelcodeList', ['filter' => 'authFilter']);
+$routes->post('createGroup', "ServicePackage/ServicePackageController::createGroup", ['filter' => 'authFilter']);
+$routes->get('getItemGroup', 'ServicePackage/ServicePackageController::getItemGroup', ['filter' => 'authFilter']);
+$routes->post('getGroupsByPmId', "ServicePackage/ServicePackageController::getGroupsByPmId", ['filter' => 'authFilter']);
+$routes->post('getItemsBySpimIds', "ServicePackage/ServicePackageController::getItemsBySpimIds", ['filter' => 'authFilter']);
+$routes->post('deleteGroup', "ServicePackage/ServicePackageController::deleteGroup", ['filter' => 'authFilter']);
+$routes->resource("ServicePackage/EngineListController", ['filter' => 'authFilter']);
+$routes->get("servicePkgPartsList", "SpareParts/SparePartsController::servicePkgPartsList", ['filter' => 'authFilter']);
+$routes->get("getRequestedPrices", "SpareParts/SparePartsController::servicePkgPartsListRequested", ['filter' => 'authFilter']);
+$routes->post("cancelPrice", "SpareParts/SparePartsController::cancelPrice", ['filter' => 'authFilter']);
+$routes->post("acceptPrice", "SpareParts/SparePartsController::acceptPrice", ['filter' => 'authFilter']);
+$routes->post("getPartcodeprice", "ServicePackage/ServicePackageController::getPartcodeprice", ['filter' => 'authFilter']);
 
 
 

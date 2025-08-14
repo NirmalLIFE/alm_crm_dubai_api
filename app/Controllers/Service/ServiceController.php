@@ -14,6 +14,7 @@ use App\Models\Service\ServiceVin;
 use App\Models\Service\ServiceKM;
 use App\Models\Service\ServiceParts;
 use App\Models\Service\ServiceLabour;
+use App\Models\ServicePackage\EngineMasterModel;
 
 
 
@@ -33,6 +34,8 @@ class ServiceController extends ResourceController
     public function index()
     {
         $VehicleMaster = new VehicleMaster();
+        $EngineMasterModel = new EngineMasterModel();
+
         $common = new Common();
         $valid = new Validation();
         $heddata = $this->request->headers();
@@ -52,9 +55,13 @@ class ServiceController extends ResourceController
         }
         if ($tokendata) {
 
-            $engineNo = $VehicleMaster->where("veh_delete_flag !=", 1)
-                ->distinct()
-                ->select('veh_enginemaster')
+            // $engineNo = $VehicleMaster->where("veh_delete_flag !=", 1)
+            //     ->distinct()
+            //     ->select('veh_enginemaster')
+            //     ->findAll();
+
+            $engineNo = $EngineMasterModel->where("eng_delete_flag", 0)
+                ->select('eng_id,eng_no,eng_labour_factor')
                 ->findAll();
 
             if ($engineNo) {

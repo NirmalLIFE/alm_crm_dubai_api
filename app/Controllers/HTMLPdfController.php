@@ -14,6 +14,14 @@ use \Mpdf\Mpdf;
 use App\Models\UserActivityLog;
 use Config\Common;
 use Config\Validation;
+use App\Models\ServicePackage\ServicePackageModelCodeModel;
+use App\Models\ServicePackage\KilometerMasterModel;
+use App\Models\ServicePackage\ServicePackageEnginesModel;
+use App\Models\ServicePackage\ServicePackageSpareModel;
+use App\Models\ServicePackage\ServicePackageLabourModel;
+use App\Models\ServicePackage\ServicePackageKmPriceModel;
+use App\Models\ServicePackage\ServicePackageModelCodeLabourModel;
+use App\Models\UserModel;
 
 use App\Controllers\BaseController;
 
@@ -483,6 +491,199 @@ class HTMLPdfController extends BaseController
       $mpdf->Output($invoices['inv_nm_id'] . ".pdf", 'D');
     } else {
       $data["qt_versions"] = [];
+    }
+  }
+
+
+  function printServicePackagePDF()
+  {
+    $mpdf = new \Mpdf\Mpdf();
+    $model_id = base64_decode(base64_decode($_GET['id']));
+    $target_km_id = base64_decode(base64_decode($_GET['km_id']));
+    $type = base64_decode(base64_decode($_GET['type']));
+    $unselected_spare = isset($_GET['unselected_spare']) && $_GET['unselected_spare'] !== ''
+      ? explode(',', base64_decode(base64_decode($_GET['unselected_spare'])))
+      : [];
+
+    $unselected_labour = isset($_GET['unselected_labour']) && $_GET['unselected_labour'] !== ''
+      ? explode(',', base64_decode(base64_decode($_GET['unselected_labour'])))
+      : [];
+    $ref_no = base64_decode(base64_decode($_GET['ref_no']));
+    $us_id = base64_decode(base64_decode($_GET['us_id']));
+
+    $ServicePackageModelCodeModel = new ServicePackageModelCodeModel();
+    $SP_Parts_Model = new ServicePackageSpareModel();
+    $SP_Labours_Model = new ServicePackageLabourModel();
+    $ServicePackageEnginesModel = new ServicePackageEnginesModel();
+    $Sp_KmPrice_Model = new ServicePackageKmPriceModel();
+    $ServicePackageModelCodeLabourModel = new ServicePackageModelCodeLabourModel();
+    $usmodel = new UserModel();
+
+
+    // $modelCode = $this->request->getVar('modelCode');
+    // $modelYear = $this->request->getVar('modelYear');
+    // $variant = $this->request->getVar('variant');
+
+
+    $user = $usmodel->where("us_id", $us_id)->first();
+    $print_by = $user['us_firstname'];
+
+
+
+
+
+    $modelData = $ServicePackageModelCodeModel
+      ->where('spmc_delete_flag', 0)
+      ->where('spmc_id', $model_id)
+      ->first();
+
+    if (!empty($modelData)) {
+      $modelLabourData = $ServicePackageModelCodeLabourModel
+        ->where('model_code', $modelData['spmc_value'])
+        ->where('spmcl_delete_flag', 0)
+        ->first();
+    }
+
+    $labourFactor = 0;
+
+    if (!empty($modelLabourData)) {
+
+      $labourRate = (float) $modelLabourData['labour_rate'];
+      $increasePct = (float) $modelLabourData['spmcl_inc_pct'];
+      $labourFactor = $labourRate + ($labourRate * $increasePct / 100);
+    }
+
+
+    // $model_id = $modelData['spmc_id'];
+
+    $engineDetails = $ServicePackageEnginesModel->select('eng_id,eng_no,speng_spmc_id,eng_labour_factor')
+      ->where("speng_delete_flag", 0)
+      ->where("speng_spmc_id", $model_id)
+      ->join('engine_master', 'engine_master.eng_id = speng_eng_id', 'left')
+      ->first();
+
+
+    // Fetch price map for each km
+    $kmPriceMap = $Sp_KmPrice_Model->table('sp_km_price_map')
+      ->select('spkmp_spkm_id, spkmp_markup_price, spkmp_display_price')
+      ->where('spkmp_spmc_id', $model_id)
+      ->get()
+      ->getResultArray();
+
+    $kmPriceMapById = [];
+    foreach ($kmPriceMap as $row) {
+      $kmPriceMapById[$row['spkmp_spkm_id']] = [
+        'markup_price' => $row['spkmp_markup_price'],
+        'display_price' => $row['spkmp_display_price'],
+      ];
+    }
+
+    // Get Spares
+    $spares = $SP_Parts_Model
+      ->select('spim_name as pm_name, pm_price,spkm_km_optional_flag,pm_code,sp_spare_category, sp_spare_qty, sp_spare_id, sp_spare_optional_flag, spkm_km_id,sp_spare_group_seq, sp_spare_labour_unit, km_value')
+      ->where('sp_spare_spmc_id', $model_id)
+      ->where('sp_spare_delete_flag', 0)
+      ->join('parts_master', 'parts_master.pm_id = sp_spare_pm_id', 'left')
+      ->join('sp_parts_master', 'sp_parts_master.sp_pm_id = pm_sp_pm_id', 'left')
+      ->join('sp_item_master', 'sp_item_master.spim_id = sp_pm_spim_id', 'left')
+      ->join('sp_km_item_map', 'sp_km_item_map.spkm_item_id = sp_spare_id AND sp_km_item_map.spkm_item_type = 0 AND sp_km_item_map.spkm_delete_flag = 0', 'left')
+      ->join('kilometer_master', 'kilometer_master.km_id = spkm_km_id', 'left')
+      ->findAll();
+
+    // Get Labours
+    $labours = $SP_Labours_Model
+      ->select('spim_name as sp_pm_name,spkm_km_optional_flag, sp_pm_category, sp_labour_qty, sp_labour_id, sp_labour_optional_flag,sp_labour_group_seq, spkm_km_id, sp_labour_unit, km_value')
+      ->where('sp_labour_spmc_id', $model_id)
+      ->where('sp_labour_delete_flag', 0)
+      ->join('sp_parts_master', 'sp_parts_master.sp_pm_id = sp_labour_lm_id', 'left')
+      ->join('sp_item_master', 'sp_item_master.spim_id = sp_pm_spim_id', 'left')
+      ->join(
+        'sp_km_item_map',
+        'sp_km_item_map.spkm_item_id = sp_labour_id AND sp_km_item_map.spkm_item_type = 1 AND sp_km_item_map.spkm_delete_flag = 0',
+        'left'
+      )
+      ->join('kilometer_master', 'kilometer_master.km_id = spkm_km_id', 'left')
+      ->findAll();
+
+    // Combine and group by km_id
+    $combinedByKm = [];
+
+    foreach ($spares as $spare) {
+      if (!empty($spare['spkm_km_id'])) {
+        $km_id = $spare['spkm_km_id'];
+        $spare['item_type'] = 0;
+        $combinedByKm[$km_id]['items'][] = $spare;
+        $combinedByKm[$km_id]['km_value'] = $spare['km_value'];
+      }
+    }
+
+    foreach ($labours as $labour) {
+      if (!empty($labour['spkm_km_id'])) {
+        $km_id = $labour['spkm_km_id'];
+        $labour['item_type'] = 1;
+        $combinedByKm[$km_id]['items'][] = $labour;
+        $combinedByKm[$km_id]['km_value'] = $labour['km_value'];
+      }
+    }
+
+    // Final structure
+    $finalResult = [];
+
+    if (!empty($target_km_id) && isset($combinedByKm[$target_km_id])) {
+      $kmGroup = $combinedByKm[$target_km_id];
+
+      $finalResult[] = [
+        'km_id'         => $target_km_id,
+        'km_value'      => $kmGroup['km_value'] ?? '',
+        'actual_price'  => $kmPriceMapById[$target_km_id]['markup_price'] ?? 0,
+        'display_price' => $kmPriceMapById[$target_km_id]['display_price'] ?? 0,
+        'items'         => $kmGroup['items'] ?? [],
+      ];
+    }
+
+    if (!empty($finalResult)) {
+      $first = $finalResult[0]; // safely get the first result
+
+      $finalOutput = [];
+      $finalOutput["items"]         = $first['items'] ?? [];
+      $finalOutput["markup_price"]  = $first['actual_price'] ?? 0;
+      $finalOutput["display_price"] = $first['display_price'] ?? 0;
+      $finalOutput["km_value"]      = $first['km_value'] ?? '';
+      $finalOutput["labourFactor"]      =  $labourFactor ?? '';
+      $finalOutput["km_id"]     = $target_km_id;
+      $finalOutput["type"]     = $type;
+      $finalOutput["unselected_spare"]     = $unselected_spare;
+      $finalOutput["unselected_labour"]     = $unselected_labour;
+      $finalOutput["ref_no"]     = $ref_no;
+      $finalOutput["print_by"]     = $print_by;
+
+
+      // print_r($finalOutput["unselected_spare"]);
+      // echo '</pre>';
+      // exit;
+      $common = new Common();
+      $mpdf->SetHTMLHeader('<img src=' . $common->getPrintHeaderImage() . ' />');
+      $mpdf->SetHTMLFooter('<img src=' . $common->getPrintFooterImage() . ' />');
+      $mpdf->shrink_tables_to_fit = 1;
+      $html = view('servicePackageView', $finalOutput);
+      $mpdf->AddPage(
+        '', // L - landscape, P - portrait 
+        '',
+        '',
+        '',
+        '',
+        0, // margin_left
+        0, // margin right
+        35, // margin top
+        30, // margin bottom
+        5, // margin header
+        0
+      ); // margin footer
+      $mpdf->WriteHTML($html);
+      $filename = 'Service_' . $modelData['spmc_value'] . '_' . $finalOutput["km_value"] . '.pdf';
+      $mpdf->Output($filename, 'D');
+    } else {
+      $finalOutput = [];
     }
   }
 }

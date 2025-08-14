@@ -61,7 +61,7 @@ class WhatsappChatController extends ResourceController
         $metadata = $entry['changes'][0]['value']['metadata'] ?? [];
         $common = new Common();
         try {
-            if ($contact && $entry["id"] == 449653888221729) {
+            if ($contact && $entry["id"] == 423892554135763) {
                 $wb_customer = new WhatsappCustomerMasterModel();
                 $wb_message = new WhatsappCustomerMessageModel();
                 $wb_camp_message = new WhatsappCampaignMessageModel();
@@ -114,8 +114,9 @@ class WhatsappChatController extends ResourceController
                         log_message('error',  "I am oneHourAgo oneHourAgo" . json_encode($timeAgo));
 
                         $workingHours = [
-                            'Monday-Saturday' => [['08:15:00', '19:10:00']],
-                            'Friday'          => [['08:15:00', '19:10:00']]
+                            'Monday-Saturday' => [['08:15:00', '20:10:00']],
+
+                            'Friday'          => [['08:15:00', '12:40:00'], ['14:20:00', '20:10:00']]
                         ];
                         $isNonWorkingHours = true; // Default to non-working
 
@@ -259,7 +260,7 @@ class WhatsappChatController extends ResourceController
                                     $messageData = array(
                                         "messaging_product" => "whatsapp",
                                         "recipient_type" => "individual",
-                                        "to" => "+918138055705",
+                                        "to" => "+971503689528",
                                         "type" => "text",
                                         "text" => array(
                                             "body" => $alertMessage
@@ -323,7 +324,7 @@ class WhatsappChatController extends ResourceController
                                                     'wb_cus_follow_up_time' => date('Y-m-d H-i-s'),
                                                     'wb_cus_remind_date' => $wb_cus_remind_date,
                                                     'wb_cus_remind_flag' => 1,  // Need To Remind
-                                                    'wb_cus_assigned' => 19
+                                                    'wb_cus_assigned' => 49
                                                 ];
                                                 $wb_customer->where('wb_cus_mobile', $mobile)->set($tracker_data)->update();
                                             }
@@ -356,7 +357,7 @@ class WhatsappChatController extends ResourceController
                                     $messageData = array(
                                         "messaging_product" => "whatsapp",
                                         "recipient_type" => "individual",
-                                        "to" => "+918138055705",
+                                        "to" => "+971503689528",
                                         "type" => "text",
                                         "text" => array(
                                             "body" => $alertMessage
@@ -420,7 +421,7 @@ class WhatsappChatController extends ResourceController
                                                     'wb_cus_follow_up_time' => date('Y-m-d H-i-s'),
                                                     'wb_cus_remind_date' => $wb_cus_remind_date,
                                                     'wb_cus_remind_flag' => 1,  // Need To Remind
-                                                    'wb_cus_assigned' => 19
+                                                    'wb_cus_assigned' => 49
                                                 ];
                                                 $wb_customer->where('wb_cus_mobile', $mobile)->set($tracker_data)->update();
                                             }
@@ -452,7 +453,7 @@ class WhatsappChatController extends ResourceController
                                     $messageData = array(
                                         "messaging_product" => "whatsapp",
                                         "recipient_type" => "individual",
-                                        "to" => "+918138055705",
+                                        "to" => "+971503689528",
                                         "type" => "text",
                                         "text" => array(
                                             "body" => $alertMessage
@@ -516,7 +517,7 @@ class WhatsappChatController extends ResourceController
                                                     'wb_cus_follow_up_time' => date('Y-m-d H-i-s'),
                                                     'wb_cus_remind_date' => $wb_cus_remind_date,
                                                     'wb_cus_remind_flag' => 1,  // Need To Remind
-                                                    'wb_cus_assigned' => 19
+                                                    'wb_cus_assigned' => 49
                                                 ];
                                                 $wb_customer->where('wb_cus_mobile', $mobile)->set($tracker_data)->update();
                                             }
@@ -781,7 +782,7 @@ class WhatsappChatController extends ResourceController
                                     $messageData = array(
                                         "messaging_product" => "whatsapp",
                                         "recipient_type" => "individual",
-                                        "to" => "+918138055705",
+                                        "to" => "+971503689528",
                                         "type" => "text",
                                         "text" => array(
                                             "body" =>  $alertMessage
@@ -816,7 +817,7 @@ class WhatsappChatController extends ResourceController
                                     $messageData = array(
                                         "messaging_product" => "whatsapp",
                                         "recipient_type" => "individual",
-                                        "to" => "+918138055705",
+                                        "to" => "+971503689528",
                                         "type" => "text",
                                         "text" => array(
                                             "body" =>  $alertMessage
@@ -873,7 +874,7 @@ class WhatsappChatController extends ResourceController
                                     $messageData = array(
                                         "messaging_product" => "whatsapp",
                                         "recipient_type" => "individual",
-                                        "to" => "+918138055705",
+                                        "to" => "+971503689528",
                                         "type" => "text",
                                         "text" => array(
                                             "body" =>  $alertMessage
@@ -903,7 +904,7 @@ class WhatsappChatController extends ResourceController
                                     $messageData = array(
                                         "messaging_product" => "whatsapp",
                                         "recipient_type" => "individual",
-                                        "to" => "+918138055705",
+                                        "to" => "+971503689528",
                                         "type" => "text",
                                         "text" => array(
                                             "body" => $alertMessage
@@ -921,7 +922,7 @@ class WhatsappChatController extends ResourceController
                                         "alm_wb_msg_source"   => "2",
                                         "alm_wb_msg_staff_id" => "18",
                                         "alm_wb_msg_type"     => "4",
-                                        "alm_wb_msg_content" => "Working Hours:\n\nMonday to Thursday & Saturday:\n⏰ *8:30 AM to 7:00 PM*\n\nFriday:\n⏰ *8:30 AM to 12:30 PM*\n⏰ *2:30 PM to 7:00 PM*",
+                                        "alm_wb_msg_content" => "Working Hours:\n\nMonday to Thursday & Saturday:\n⏰ *8:30 AM to 8:00 PM*\n\nFriday:\n⏰ *8:30 AM to 12:30 PM*\n⏰ *2:30 PM to 8:00 PM*",
                                         "alm_wb_msg_status"   => 1,
                                         "alm_wb_msg_customer" => $msg_customer['wb_cus_id'],
                                         "alm_wb_msg_mobile"   => $contact['wa_id'],
@@ -1100,7 +1101,7 @@ class WhatsappChatController extends ResourceController
                                             $tracker_data = [
                                                 'wb_cus_remind_flag' => 2,  //Appointment Assistance
                                                 'wb_cus_updated_on' => date('Y-m-d H-i-s'),
-                                                'wb_cus_assigned' => 19
+                                                'wb_cus_assigned' => 49
                                             ];
                                             $wb_customer->where('wb_cus_mobile', $mobile)->set($tracker_data)->update();
                                             $currentFollowUp = $wb_customer->where('wb_cus_mobile', $mobile)->select('wb_cus_follow_up')->first();
@@ -1159,18 +1160,20 @@ class WhatsappChatController extends ResourceController
                                 if ($message['referral']['source_type'] == 'ad') {
                                     $campaign_data = $common->getAdCampaignId($message['referral']['source_id']);
                                     $socialMediaCampaign = new SocialMediaCampaignModel();
-                                    $current_camp = $socialMediaCampaign->where('smc_ad_id', $campaign_data->campaign_id)->where('smc_status', 0)->first();
-                                    if (isset($current_camp)) {
-                                        $source_type = 8;
-                                        $social_source = 3;
-                                        $social_camp_id = $current_camp['smc_id'];
+                                    if (isset($campaign_data) && isset($campaign_data->campaign_id)) {
+                                        $current_camp = $socialMediaCampaign->where('smc_ad_id', $campaign_data->campaign_id)->where('smc_status', 0)->first();
+                                        if (isset($current_camp)) {
+                                            $source_type = 8;
+                                            $social_source = 3;
+                                            $social_camp_id = $current_camp['smc_id'];
+                                        }
                                     }
                                 }
                             }
 
 
                             if ($last_lead && $hoursDifference < $reOpenHours && $last_lead['purpose_id'] == '10') {
-                                log_message('error',  "Leads Can be reopened---- last Lead details" . json_encode($last_lead));
+                                // log_message('error',  "Leads Can be reopened---- last Lead details" . json_encode($last_lead));
                                 $lead_code = $last_lead['lead_code'];
                                 $lead_id = $last_lead['lead_id'];
                                 $lead_source = $last_lead['source_id'];
@@ -1203,7 +1206,7 @@ class WhatsappChatController extends ResourceController
                                 $leadAcModel = new LeadActivityModel();
                                 $leadactivity = $leadAcModel->insert($leadactivitydata);
                             } else {
-                                log_message('error',  "Leads Can't be reopened" . json_encode($last_lead));
+                                // log_message('error',  "Leads Can't be reopened" . json_encode($last_lead));
                                 $builder = $this->db->table('sequence_data');
                                 $builder->selectMax('current_seq');
                                 $query = $builder->get();
@@ -1311,7 +1314,7 @@ class WhatsappChatController extends ResourceController
                             }
                         }
 
-                        if ($messaged && !$isNonWorkingHours && $message['type'] != "interactive" && $message['type'] != "button" && $message['type'] != "location") {
+                        if (!$messaged && $isNonWorkingHours && $message['type'] != "interactive" && $message['type'] != "button" && $message['type'] != "location") {
                             // log_message('error', "The current time falls within ramdan time range. Sending message...");
                             $cacheKey = "away_msg_lock_" . $wb_cus_id;
                             // Check if the lock exists
@@ -1401,7 +1404,7 @@ class WhatsappChatController extends ResourceController
     {
         $ch = curl_init();
 
-        curl_setopt($ch, CURLOPT_URL, "http://localhost:3000/api/send_message"); // https://chatramsserver-production.up.railway.app/api/send_message
+        curl_setopt($ch, CURLOPT_URL, "https://chatramsserver-production.up.railway.app/api/send_message"); // http://localhost:3000/api/send_message
         curl_setopt($ch, CURLOPT_HTTPHEADER, array(
             'Content-Type: application/x-www-form-urlencoded' // Change to form-urlencoded
         ));
@@ -2197,7 +2200,7 @@ class WhatsappChatController extends ResourceController
                         Here are the details: 
                         DATE: ' . $formattedDate . '
                         TIME: ' . $this->request->getVar("timeFrom") . ' TO ' . $this->request->getVar("timeTo") . '
-                        location : https://maps.app.goo.gl/HBd9ZUbGmh9rtZUCA',
+                        location : https://maps.app.goo.gl/v6CubY8wkWadQzYg9',
                         'alm_wb_msg_customer' => $this->request->getVar("cust_id"),
                         'alm_wb_msg_reply_id' => '',
                         'alm_wb_msg_created_on' => date("Y-m-d H:i:s.u"),
@@ -3870,7 +3873,7 @@ Sunday: Off day",
                 "to" => $this->request->getVar("cust_mobile"),
                 "type" => "template",
                 "template" => array(
-                    "name" => "garage_location", // Replace with your template name
+                    "name" => "garage_location_template", // Replace with your template name
                     "language" => array(
                         "code" => "en" // Replace with the language code of your template
                     ),
@@ -3963,7 +3966,7 @@ Sunday: Off day",
                 "to" => $this->request->getVar("cust_mobile"),
                 "type" => "template",
                 "template" => array(
-                    "name" => "appointment_remainder", // Replace with your template name
+                    "name" => "appointment_reminder", // Replace with your template name
                     "language" => array(
                         "code" => "en" // Replace with the language code of your template
                     ),
@@ -4303,10 +4306,23 @@ Sunday: Off day",
                 "to" => $this->request->getVar("cust_mobile"),
                 "type" => "template",
                 "template" => array(
-                    "name" => "campaign_message", // Replace with your template name
+                    "name" => "automotive_campaign", // Replace with your template name
                     "language" => array(
                         "code" => "en" // Replace with the language code of your template
                     ),
+                    "components" => array(
+                        array(
+                            "type" => "header",
+                            "parameters" => array(
+                                array(
+                                    'type' => 'image',
+                                    'image' => [
+                                        'link' => 'https://autoversa-media.s3.me-central-1.amazonaws.com/crm_whatsapp_media/crm_capmpaign.jpg', // Replace with the image URL// Optional: Add a caption to the image
+                                    ]
+                                ),
+                            )
+                        ),
+                    )
                 )
             );
             $returnMsg = $common->sendCustomerWhatsappMessage($messageData, '971509766075');
@@ -4316,10 +4332,10 @@ Sunday: Off day",
                     $message_data = [
                         'alm_wb_msg_master_id' => $returnMsg->messages[0]->id,
                         'alm_wb_msg_source' => 2,
-                        'alm_wb_msg_type' => 4,
-                        'alm_wb_msg_caption' => '',
                         'alm_wb_msg_status' => 1,
-                        'alm_wb_msg_content' => '*Exclusive Offer: 100-Point Health & Computer Check-Up!*
+                        'alm_wb_msg_type' => 5,
+                        'alm_wb_msg_content' => 'crm_whatsapp_media/crm_capmpaign.jpg',
+                        'alm_wb_msg_caption' =>  '*Exclusive Offer: 100-Point Health & Computer Check-Up!*
 
 Keep your vehicle in top shape with our comprehensive inspection and computer diagnostic.
 
@@ -4411,10 +4427,23 @@ Limited-time offer – ensure your car’s in expert hands today!',
                 "to" => $this->request->getVar("country_code") . $this->request->getVar("mobile_number"),
                 "type" => "template",
                 "template" => array(
-                    "name" => "campaign_message", // Replace with your template name
+                    "name" => "automotive_campaign", // Replace with your template name
                     "language" => array(
                         "code" => "en" // Replace with the language code of your template
                     ),
+                    "components" => array(
+                        array(
+                            "type" => "header",
+                            "parameters" => array(
+                                array(
+                                    'type' => 'image',
+                                    'image' => [
+                                        'link' => 'https://autoversa-media.s3.me-central-1.amazonaws.com/crm_whatsapp_media/crm_capmpaign.jpg', // Replace with the image URL// Optional: Add a caption to the image
+                                    ]
+                                ),
+                            )
+                        ),
+                    )
                 )
             );
             $returnMsg = $common->sendCustomerWhatsappMessage($messageData, '971509766075');
@@ -4439,8 +4468,9 @@ Limited-time offer – ensure your car’s in expert hands today!',
                     $message_data = [
                         'alm_wb_msg_master_id' => $returnMsg->messages[0]->id,
                         'alm_wb_msg_source' => 2,
-                        'alm_wb_msg_type' => 4,
-                        'alm_wb_msg_content' => '*Exclusive Offer: 100-Point Health & Computer Check-Up!*
+                        'alm_wb_msg_type' => 5,
+                        'alm_wb_msg_content' => 'crm_whatsapp_media/crm_capmpaign.jpg',
+                        'alm_wb_msg_caption' => '*Exclusive Offer: 100-Point Health & Computer Check-Up!*
 
                         Keep your vehicle in top shape with our comprehensive inspection and computer diagnostic.
                         
@@ -5006,8 +5036,8 @@ Al Maraghi Independent Mercedes Benz Service Centre Dubai",
         foreach ($customers as $cust) {
 
             $phone = !empty($cust['MOBILE']) ? $cust['MOBILE'] : $cust['PHONE'];
-            $last9Digits = substr($phone, -10);
-            $whatsappNumber = '91' . $last9Digits;
+            $last9Digits = substr($phone, -9);
+            $whatsappNumber = '971' . $last9Digits;
 
             $templateName = "";
             $alm_wb_msg_content = "";
@@ -5172,7 +5202,7 @@ www.benzuae.com
                     $wb_customer = new WhatsappCustomerMasterModel();
                     $wb_message = new WhatsappCustomerMessageModel();
 
-                    $msg_customer = $wb_customer->where('SUBSTRING(wb_cus_mobile, -10)', $last9Digits)->first();
+                    $msg_customer = $wb_customer->where('SUBSTRING(wb_cus_mobile, -9)', $last9Digits)->first();
 
                     if (!$msg_customer) {
                         $tracker_data = [
@@ -5958,7 +5988,7 @@ www.benzuae.com
             $messageData = array(
                 "messaging_product" => "whatsapp",
                 "recipient_type" => "individual",
-                "to" => "+918138055705",
+                "to" => "+971503689528",
                 "type" => "text",
                 "text" => array(
                     "body" => $alertMessage
@@ -5995,7 +6025,7 @@ www.benzuae.com
                     'purpose_id' => 1,  // Appointment
                     'lang_id' => 1,
                     'lead_note' => 'Appointment from service reminder due',
-                    'assigned' => 19,
+                    'assigned' => 49,
                     'ld_appoint_date' =>  $appdate,
                     'ld_appoint_time' =>  $formattedTime,
                     'register_number' =>  $reg_no['alm_wb_camp_msg_cus_reg_no'],
@@ -6011,7 +6041,7 @@ www.benzuae.com
                     'purpose_id' => 1,  // Appointment
                     'lang_id' => 1,
                     'lead_note' => 'Appointment from non working hours',
-                    'assigned' => 19,
+                    'assigned' => 49,
                     'ld_appoint_date' =>  $appdate,
                     'ld_appoint_time' =>  $formattedTime,
                     'lead_createdby' => 1,
@@ -6047,8 +6077,8 @@ www.benzuae.com
 
 
 
-            log_message('error',  "Last Lead in createAutoAppointment  pickup_mode >>>>>>>>>" . json_encode($pickup_mode));
-            log_message('error',  "Last Lead in createAutoAppointment  pickup_mode >>>>>>>>>" . json_encode($pickup_mode['wb_cus_pickup_mode']));
+            // log_message('error',  "Last Lead in createAutoAppointment  pickup_mode >>>>>>>>>" . json_encode($pickup_mode));
+            // log_message('error',  "Last Lead in createAutoAppointment  pickup_mode >>>>>>>>>" . json_encode($pickup_mode['wb_cus_pickup_mode']));
 
 
             $apptMdata = [
@@ -6074,7 +6104,7 @@ www.benzuae.com
                     'appt_apptm_id' => $result,
                     'appt_date' => $appdate,
                     'appt_time' => $formattedTime,
-                    'appt_assign_to' => 19,
+                    'appt_assign_to' => 49,
                     'appt_note' => 'Appointment from service reminder',
                     'appt_created_by' => 1,
                     'appt_created_on' => date("Y-m-d H:i:s"),
@@ -6121,10 +6151,10 @@ www.benzuae.com
                                         "type" => "text",
                                         "text" =>  $apptTime, //"$this->request->getVar("timeFrom")"
                                     ),
-                                    array(
-                                        "type" => "text",
-                                        "text" =>  $reg_no['alm_wb_camp_msg_cus_reg_no'],
-                                    ),
+                                    // array(
+                                    //     "type" => "text",
+                                    //     "text" =>  $reg_no['alm_wb_camp_msg_cus_reg_no'],
+                                    // ),
                                 )
                             )
                         )
@@ -6141,13 +6171,13 @@ www.benzuae.com
                             'alm_wb_msg_type' => 5,
                             'alm_wb_msg_content' => 'common_use/playstore.png',
                             'alm_wb_msg_status' => 1,
-                            'alm_wb_msg_caption' => 'Greetings from Al Maraghi Auto Repairs. 
+                            'alm_wb_msg_caption' => 'Greetings from Al Maraghi Automotive.
                         We wanted to confirm your upcoming appointment for your Mercedes-Benz service.
                         Here are the details: 
                         DATE: ' . $appdate . '
                         TIME: ' . $apptTime . '
                         REG NO: ' .  $reg_no['alm_wb_camp_msg_cus_reg_no'] . '
-                        Location: https://maps.app.goo.gl/HBd9ZUbGmh9rtZUCA',
+                        Location:https://maps.app.goo.gl/v6CubY8wkWadQzYg9',
 
                             'alm_wb_msg_customer' => $msg_customer['wb_cus_id'],
                             'alm_wb_msg_reply_id' => '',
@@ -6160,13 +6190,13 @@ www.benzuae.com
                             'room_id' => 'crm_' . $msg_customer['wb_cus_mobile'],
                             'message_type' => 4,
                             'message_source' => 2,
-                            'message' => 'Greetings from Al Maraghi Auto Repairs. 
+                            'message' => 'Greetings from Al Maraghi Automotive.
                         We wanted to confirm your upcoming appointment for your Mercedes-Benz service.
                         Here are the details: 
                         DATE: ' . $appdate . '
                         TIME: ' . $apptTime . '
                         REG NO: ' .  $reg_no['alm_wb_camp_msg_cus_reg_no'] . '
-                        Location: https://maps.app.goo.gl/HBd9ZUbGmh9rtZUCA',
+                        Location: https://maps.app.goo.gl/v6CubY8wkWadQzYg9',
                             'time' => date('Y-m-d H:i:s'),
                             'toUserId' => 0,
                             'fromUserId' => $msg_customer
@@ -6689,7 +6719,7 @@ www.benzuae.com
                 'ldm_psf_id' => 0,
                 'ldm_status' => 1,
                 'ldm_type' => 4,  // From Service Reminder
-                'ldm_assign' => 19,
+                'ldm_assign' => 49,
                 'ldm_created_on' => date("Y-m-d H:i:s.u"),
                 'ldm_created_by' => 1,
                 'ldm_updated_on' => date("Y-m-d H:i:s.u"),
@@ -6773,12 +6803,12 @@ www.benzuae.com
         }
     }
 
-    public function checkCustomerHasAppointment($msg_customer)
+  public function checkCustomerHasAppointment($msg_customer)
     {
         $Leadmodel = new LeadModel();
         $ApptMaster = new AppointmentMasterModel();
-
-        $status = [1, 7, 8];
+        $lmodel = new LeadModel();
+        $status = [1, 8];
         $lead_list = $Leadmodel->whereIn('status_id', $status)
             ->where('RIGHT(phone,9)', substr($msg_customer['wb_cus_mobile'], -9))
             ->orderBy('lead_id', 'desc')
@@ -6808,10 +6838,60 @@ www.benzuae.com
 
                 if ($hoursDifference < $reOpenHours && $last_lead['purpose_id'] == '10') {
                     $lead_id = $last_lead['lead_id'];
+                    $last_lead = $lmodel->find($lead_id);
+                } else {
+
+                    $builder = $this->db->table('sequence_data');
+                    $builder->selectMax('current_seq');
+                    $query = $builder->get();
+                    $row = $query->getRow();
+                    $lead_code = $row->current_seq;
+                    $leadSeqvalfinal = $row->current_seq;
+                    if (strlen($row->current_seq) == 1) {
+                        $lead_code = "ALMLD-000" . $row->current_seq;
+                    } else if (strlen($row->current_seq) == 2) {
+                        $lead_code = "ALMLD-00" . $row->current_seq;
+                    } else if (strlen($row->current_seq) == 3) {
+                        $lead_code = "ALMLD-0" . $row->current_seq;
+                    } else {
+                        $lead_code = "ALMLD-" . $row->current_seq;
+                    }
+
+                    $leadData = [
+                        'lead_code' => $lead_code,
+                        'lead_note' => "New lead created from whatsapp enquiry for Appointment",
+                        'lang_id' => 1,
+                        'purpose_id' => 1,
+                        'register_number' => '',
+                        'vehicle_model' => '',
+                        'source_id' => 9,
+                        'lead_social_media_source' =>  0,
+                        'lead_social_media_mapping' => 0,
+                        'lead_createdby' => 1,
+                        'lead_createdon' => date("Y-m-d H:i:s.u"),
+                        'lead_creted_date' => date("Y-m-d H:i:s.u"),
+                        'lead_updatedon' => date("Y-m-d H:i:s.u"),
+                        'status_id' => 1,
+                    ];
+                    $id = $lmodel->insert($leadData);
+                    $leadactivitydata = [
+                        'lac_activity' => 'Created Lead ' . $lead_code . ' from whatsapp',
+                        'lac_activity_by' => 1,
+                        'lac_lead_id' => $id,
+                        'lac_lead_purpose' => 1,
+                        'lac_lead_source' => 9,
+                    ];
+                    $leadAcModel = new LeadActivityModel();
+                    $leadactivity = $leadAcModel->insert($leadactivitydata);
+                    $builder = $this->db->table('sequence_data');
+                    $builder->set('current_seq', ++$leadSeqvalfinal);
+                    $builder->update();
+                    $last_lead = $lmodel->find($id);
                 }
             }
         } else {
             $lead_id = $lead_list[0]['lead_id'];
+            $last_lead = $lmodel->find($lead_id);
         }
 
         // log_message('error', "Last Lead in createAutoAppointment message >>>>>>>>>" . json_encode($last_lead));
@@ -7587,12 +7667,12 @@ If you’d like to update it, feel free to reach out! 😊📲";
             "type" => "interactive",
             "interactive" => array(
                 "type" => "button",
-                // "body" => array(
-                //     "text" => "Thank you for reaching out! We're currently unavailable, but we’ll get back to you soon.\nIn the meantime, please select an option below:"
-                // ),
                 "body" => array(
-                    "text" => "Thank you for reaching out to *Al Maraghi Auto Repairs – Dubai*!\n\nWe are currently unavailable as we are on an Eid holiday.\n\nWe will reopen on Monday June 9th and will get back to you as soon as possible.\n\nAl Maraghi wishing you and your loved ones a joyous and blessed Eid! 🌙✨"
+                    "text" => "Thank you for reaching out to *Al Maraghi Auto Repairs – Dubai* ! \n\nWe're currently unavailable, but don't worry we'll get back to you as soon as we're online.\n\nIn the meantime, please select an option below:"
                 ),
+                // "body" => array(
+                //     "text" => "Thank you for reaching out to *Al Maraghi Auto Repairs – Dubai*!\n\nWe are currently unavailable as we are on an Eid holiday.\n\nWe will reopen on Monday June 9th and will get back to you as soon as possible.\n\nAl Maraghi wishing you and your loved ones a joyous and blessed Eid! 🌙✨"
+                // ),
                 "footer" => array(
                     "text" => "Tap an option to respond."
                 ),
