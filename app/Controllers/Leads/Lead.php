@@ -24,6 +24,7 @@ use App\Models\Dissatisfied\DissatisfiedLogModel;
 use App\Models\Customer\MaraghiJobcardModel;
 use App\Models\Quotes\QuotesMasterModel;
 use Twilio\TwiML\Voice\Start;
+use DateTime;
 
 class Lead extends ResourceController
 {
@@ -1067,6 +1068,7 @@ class Lead extends ResourceController
                 'lead_updatedby' => $tokendata['uid'],
                 'lead_from' =>  "P",
                 'lead_updatedon' => date("Y-m-d H:i:s"),
+                'lead_category' => $this->request->getVar('lead_category'),
 
             ];
 
@@ -1250,7 +1252,8 @@ class Lead extends ResourceController
                     'lcl_lead_id' => $this->request->getVar('lead_id'),
                     'lcl_pupose_id' => $purpose_id,
                     'lcl_purpose_note' => $this->request->getVar('call_note'),
-                    'lcl_time' => date("Y-m-d h:i"),
+                    'lcl_time' => date("Y-m-d H:i:s"),
+                    // 'lcl_time' => date("Y-m-d h:i"),
                     // 'lcl_call_type' => 0,
                     // 'lcl_created_on'=> date("Y-m-d H:i:s"),
                 ];
@@ -2932,7 +2935,7 @@ class Lead extends ResourceController
                 lead_createdby,lead_createdon,lead_creted_date,lead_from,lead_id,lead_note,
                 lead_updatedby,lead_updatedon,name,outbound_lead,phone,purpose_id,register_number,
                 rating,reason_to_close,source_id,status_id,vehicle_model,assigned,lql_source,ld_src as lead_source,
-                lead_social_media_source,lead_social_media_mapping,smc_message,smc_name,smcs_name')
+                lead_social_media_source,lead_social_media_mapping,smc_message,smc_name,smcs_name,ld_verify_flag')
                 ->first();
 
             $res_log =  $quotelogmodel->where('lql_lead_id', $lead_id)
@@ -3985,7 +3988,7 @@ class Lead extends ResourceController
                     ->select('purpose_id,lead_note,lcl_pupose_id,lcl_purpose_note,lcl_call_to,
                 lcl_created_on,lcl_createdby,lcl_phone as call_from,lcl_lead_id,lead_code,name,phone,status_id,lead_createdon,
                 call_purposes.call_purpose,call_purposes.cp_id,us_firstname,ystar_call_id,cust_name,assigned,lql_status,lead_id,
-                lql_status,lql_type,ld_src as lead_source,lead_createdby')
+                lql_status,lql_type,ld_src as lead_source,lead_createdby,ld_verify_flag')
                     ->join('lead_call_log', 'lead_call_log.lcl_lead_id=leads.lead_id', 'left')
                     ->join('users', 'users.us_id =leads.assigned', 'left')   // finding lead created user
                     ->join('customer_master', 'customer_master.cust_phone =phone', 'left') //added just for fetch customer names
@@ -4411,7 +4414,7 @@ class Lead extends ResourceController
 
 
             $builder = $this->db->table('leads');
-            $builder->select("lead_id,lead_code, COALESCE(NULLIF(name, ''), 'NEW') as name, phone,vehicle_model,lead_note,source_id,DATE(lead_createdon) as lead_createdon ,status_id,lead_source.ld_src,lead_status.ld_sts,users.us_firstname,ld_appoint_date,assigned,camp_name,ld_camp_id,ld_brand,us.us_firstname as created,call_purpose,purpose_id,ld_appoint_time,apptm_id");
+            $builder->select("lead_id,lead_code, COALESCE(NULLIF(name, ''), 'NEW') as name, phone,vehicle_model,lead_note,source_id,DATE(lead_createdon) as lead_createdon ,status_id,lead_source.ld_src,lead_status.ld_sts,users.us_firstname,ld_appoint_date,assigned,camp_name,ld_camp_id,ld_brand,us.us_firstname as created,call_purpose,purpose_id,ld_appoint_time,apptm_id,ld_verify_flag");
             $builder->join('users', 'users.us_id =assigned', 'left');
             $builder->join('users as us', 'us.us_id =lead_createdby', 'left');
             $builder->join('lead_status', 'lead_status.ld_sts_id =status_id', 'left');
@@ -4746,8 +4749,9 @@ class Lead extends ResourceController
             $builder = $this->db->table('leads');
             $builder->select('lead_id,lead_code,name, phone,vehicle_model,lead_note,source_id,DATE(lead_createdon) as lead_createdon ,
             status_id,lead_source.ld_src,lead_status.ld_sts,users.us_firstname,ld_appoint_date,assigned,
-            ld_brand,us.us_firstname as created,ld_appoint_time,apptm_id,lead_social_media_mapping,smc_code,
+            ld_brand,us.us_firstname as created,ld_appoint_time,apptm_id,lead_social_media_mapping,smc_code,purpose_id,call_purpose,
             smc_message,smc_name,smc_status,smc_start_date,smc_end_date,smc_source,smc_owner,CONCAT(smc_message, "(", smc_name, ")") as campaign_displayname');
+            $builder->join('call_purposes', 'call_purposes.cp_id =purpose_id', 'left');
             $builder->join('users', 'users.us_id =assigned', 'left');
             $builder->join('users as us', 'us.us_id =lead_createdby', 'left');
             $builder->join('lead_status', 'lead_status.ld_sts_id =status_id', 'left');
@@ -4755,9 +4759,10 @@ class Lead extends ResourceController
             $builder->join('social_media_campaign', 'social_media_campaign.smc_id =lead_social_media_mapping', 'left');
             $builder->join('appointment_master', 'appointment_master.apptm_lead_id =lead_id', 'left');
             $builder->where('lead_delete_flag', 0);
-            $builder->where('status_id', 8);
+            $builder->whereIn('status_id',  [8, 1, 6, 5]);    // $builder->where('status_id', 8);
             $builder->whereIn('source_id', [8, 9]);
             $builder->orderby('lead_id', 'desc');
+            $builder->groupBy('lead_id');
             $builder->limit(1000);
             // $query = $builder->get();
             // $res = $query->getResultArray();
@@ -4788,6 +4793,305 @@ class Lead extends ResourceController
                     'ret_data' => 'fail',
                 ];
                 return $this->respond($response, 200);
+            }
+        }
+    }
+
+
+    public function getLeadsList()
+    {
+        $model = new LeadModel();
+        $common = new Common();
+        $valid = new Validation();
+        $heddata = $this->request->headers();
+        $tokendata = $common->decode_jwt_token($valid->getbearertoken($heddata['Authorization']));
+
+        if ($tokendata['aud'] == 'superadmin') {
+            $SuperModel = new SuperAdminModel();
+            $super = $SuperModel->where("s_adm_id", $tokendata['uid'])->first();
+            if (!$super) return $this->fail("invalid user", 400);
+        } else if ($tokendata['aud'] == 'user') {
+            $usmodel = new UserModel();
+            $user = $usmodel->where("us_id", $tokendata['uid'])->first();
+            if (!$user) return $this->fail("invalid user", 400);
+        } else {
+            $data['ret_data'] = "Invalid user";
+            return $this->fail($data, 400);
+        }
+        if ($tokendata) {
+
+            $dateFrom = $this->request->getVar('dateFrom');
+            $dateTo = $this->request->getVar('dateTo');
+            $source = $this->request->getVar('source');
+            $leadSource = $this->request->getVar('leadSource');
+
+            $date = new DateTime();
+            $currentDate = $date->format('Y-m-d');
+
+
+
+            if ($source == '0') {
+                // Leads Wise Data
+
+                //     $subquery = "(SELECT MAX(job_no) AS latest_job_no, customer_no 
+                //   FROM cust_job_data_laabs 
+                //   GROUP BY customer_no) AS latest_jobs";
+
+
+                //     $builder = $this->db->table('leads');
+                //     $builder->select('lead_id, lead_code, name, leads.phone, vehicle_model, lead_note, source_id, DATE(lead_createdon) as lead_createdon,
+                //     status_id, lead_source.ld_src, lead_status.ld_sts, users.us_firstname, ld_appoint_date, assigned,
+                //     ld_brand, us.us_firstname as created, ld_appoint_time, purpose_id, call_purpose ,cust_data_laabs.customer_code');
+                //     $builder->join('call_purposes', 'call_purposes.cp_id = purpose_id', 'left');
+                //     $builder->join('users', 'users.us_id = assigned', 'left');
+                //     $builder->join('users as us', 'us.us_id = lead_createdby', 'left');
+                //     $builder->join('lead_status', 'lead_status.ld_sts_id = status_id', 'left');
+                //     $builder->join('lead_source', 'lead_source.ld_src_id = source_id', 'left');
+                //     $builder->join('cust_data_laabs', 'SUBSTRING(cust_data_laabs.phone, -9) = SUBSTRING(leads.phone, -9)', 'left');
+                //     $builder->join('cust_job_data_laabs', 'cust_job_data_laabs.customer_no = cust_data_laabs.customer_code', 'left');
+                //     $builder->join($subquery, 'latest_jobs.latest_job_no = cust_job_data_laabs.job_no AND latest_jobs.customer_no = cust_job_data_laabs.customer_no', 'left'); // Join with the subquery
+                //     $builder->groupStart(); // Start a grouped condition
+                //     $builder->where('cust_job_data_laabs.job_open_date IS NULL');
+                //     $builder->orWhere('DATE(STR_TO_DATE(cust_job_data_laabs.job_open_date, "%d-%b-%y")) <', $dateFrom);
+                //     $builder->orWhere('DATE(STR_TO_DATE(cust_job_data_laabs.job_open_date, "%d-%b-%y")) >', $currentDate);
+                //     $builder->groupEnd(); // End the grouped condition
+                //     $builder->where('lead_delete_flag', 0);
+                //     $builder->whereIn('status_id', [8, 1]);
+                //     $builder->orderBy('lead_id', 'desc');
+                //     $builder->groupBy('leads.phone');
+                //     $builder->limit(2000);
+
+
+                $currentMonth = date('Y-m');
+
+                // Subquery to get the latest alm_wb_camp_msg_id for each phone number
+                $subQuery = $this->db->table('alm_whatsapp_camp_cus_messages')
+                    ->select('MAX(alm_wb_camp_msg_id) as latest_msg_id, SUBSTRING(alm_wb_camp_msg_cus_phone, -9) as phone_last_9')
+                    ->groupBy('phone_last_9')
+                    ->getCompiledSelect(); // Convert the subquery to a string
+
+                // Main query
+                $builder = $this->db->table('leads');
+                $builder->select('lead_id, lead_code, name, leads.phone, vehicle_model, lead_note, source_id, DATE(lead_createdon) as lead_createdon,
+                status_id, lead_source.ld_src, lead_status.ld_sts, users.us_firstname, ld_appoint_date, assigned,
+                ld_brand, us.us_firstname as created, ld_appoint_time, purpose_id, call_purpose ,cust_data_laabs.customer_code, alm_whatsapp_camp_cus_messages.*');
+                $builder->join('call_purposes', 'call_purposes.cp_id = purpose_id', 'left');
+                $builder->join('users', 'users.us_id = assigned', 'left');
+                $builder->join('users as us', 'us.us_id = lead_createdby', 'left');
+                $builder->join('lead_status', 'lead_status.ld_sts_id = status_id', 'left');
+                $builder->join('lead_source', 'lead_source.ld_src_id = source_id', 'left');
+                $builder->join('cust_data_laabs', 'SUBSTRING(cust_data_laabs.phone, -9) = SUBSTRING(leads.phone, -9)', 'left');
+                $builder->join('cust_job_data_laabs', 'cust_job_data_laabs.customer_no = cust_data_laabs.customer_code', 'left');
+
+                // Join the subquery as 'latest_msg'
+                $builder->join("($subQuery) as latest_msg", 'SUBSTRING(leads.phone, -9) = latest_msg.phone_last_9', 'left');
+
+                // Join the alm_whatsapp_camp_cus_messages using the latest message ID
+                $builder->join('alm_whatsapp_camp_cus_messages', 'alm_whatsapp_camp_cus_messages.alm_wb_camp_msg_id = latest_msg.latest_msg_id', 'left');
+
+                $builder->where('cust_job_data_laabs.customer_no IS NULL');  // Exclude leads with customer_no in cust_job_data_laabs
+                $builder->where('lead_delete_flag', 0);
+                $builder->whereIn('status_id', [8, 1]);
+
+                $builder->groupStart();
+                $builder->where("DATE_FORMAT(alm_whatsapp_camp_cus_messages.alm_wb_camp_msg_created_on, '%Y-%m') != '$currentMonth'", NULL, FALSE);
+                $builder->orWhere('alm_whatsapp_camp_cus_messages.alm_wb_camp_msg_id IS NULL');
+                $builder->groupEnd();
+
+                $builder->orderBy('lead_id', 'desc');
+                $builder->groupBy('leads.phone');
+                $builder->limit(2000);
+
+
+
+                if (!empty($leadSource)) {
+                    $builder->whereIn('source_id', $leadSource);
+                }
+                if (!empty($dateFrom)) {
+                    $builder->where('DATE(lead_createdon) >=', $dateFrom);
+                }
+                if (!empty($dateTo)) {
+                    $builder->where('DATE(lead_createdon) <=', $dateTo);
+                }
+                $res = $builder->get()->getResultArray();
+            } else {
+
+                $builder = $this->db->table('cust_job_data_laabs');
+                $dateFrom = $this->request->getVar('dateFrom');
+                $dateTo = $this->request->getVar('dateTo');
+                $currentMonth = date('Y-m');
+
+                $subQuery_latest_message = $this->db->table('alm_whatsapp_camp_cus_messages')
+                    ->select('MAX(alm_wb_camp_msg_id) as latest_msg_id, SUBSTRING(cust_data_laabs.phone, -9) as phone_last_9')
+                    ->join('cust_data_laabs', 'SUBSTRING(cust_data_laabs.phone, -9) = SUBSTRING(alm_whatsapp_camp_cus_messages.alm_wb_camp_msg_cus_phone, -9)', 'left')
+                    ->groupBy('phone_last_9')
+                    ->getCompiledSelect();
+
+
+                $subQuery = $this->db->table('cust_job_data_laabs')
+                    ->select('customer_no')
+                    ->where("STR_TO_DATE(invoice_date, '%d-%b-%y') > STR_TO_DATE('$dateTo', '%Y-%m-%d')")
+                    ->groupBy('customer_no')
+                    ->get()
+                    ->getResultArray();
+
+                $excludedCustomers = array_column($subQuery, 'customer_no');
+
+                $query = $builder
+                    ->select('cust_job_data_laabs.*, cust_data_laabs.*')
+                    ->join('cust_data_laabs', 'cust_data_laabs.customer_code = cust_job_data_laabs.customer_no', 'left')
+                    ->join("($subQuery_latest_message) as latest_msg", 'SUBSTRING(cust_data_laabs.phone, -9) = latest_msg.phone_last_9', 'left')
+                    ->join('alm_whatsapp_camp_cus_messages', 'alm_whatsapp_camp_cus_messages.alm_wb_camp_msg_id = latest_msg.latest_msg_id', 'left')
+                    // ->join('alm_whatsapp_camp_cus_messages', 'SUBSTRING(alm_whatsapp_camp_cus_messages.alm_wb_camp_msg_cus_phone, -9) = SUBSTRING(cust_data_laabs.phone, -9)', 'left')
+                    ->where("STR_TO_DATE(invoice_date, '%d-%b-%y') >= STR_TO_DATE('$dateFrom', '%Y-%m-%d')")
+                    ->where("STR_TO_DATE(invoice_date, '%d-%b-%y') <= STR_TO_DATE('$dateTo', '%Y-%m-%d')")
+                    ->whereNotIn('customer_no', $excludedCustomers)
+                    ->groupStart() // Group conditions for alm_whatsapp_camp_cus_messages
+                    ->where("DATE_FORMAT(alm_whatsapp_camp_cus_messages.alm_wb_camp_msg_created_on, '%Y-%m') != '$currentMonth'", NULL, FALSE) // Use the correct column name
+                    ->orWhere('alm_whatsapp_camp_cus_messages.alm_wb_camp_msg_id IS NULL') // Include rows where there is no corresponding entry in alm_whatsapp_camp_cus_messages
+                    ->groupEnd()
+                    ->groupBy('cust_job_data_laabs.customer_no')
+                    ->get();
+
+                $res = $query->getResultArray();
+            }
+            if ($res) {
+                $response = [
+                    'ret_data' => 'success',
+                    'LeadList' => $res
+                ];
+                return $this->respond($response, 200);
+            } else {
+                $response = [
+                    'ret_data' => 'fail',
+                ];
+                return $this->respond($response, 200);
+            }
+        }
+    }
+
+    public function fetchAllLeadsByPhone()
+    {
+        $model = new LeadModel();
+        $common = new Common();
+        $valid = new Validation();
+
+        $heddata = $this->request->headers();
+        $tokendata = $common->decode_jwt_token($valid->getbearertoken($heddata['Authorization']));
+
+        if ($tokendata['aud'] == 'superadmin') {
+            $SuperModel = new SuperAdminModel();
+            $super = $SuperModel->where("s_adm_id", $tokendata['uid'])->first();
+            if (!$super) return $this->fail("invalid user", 400);
+        } else if ($tokendata['aud'] == 'user') {
+            $usmodel = new UserModel();
+            $user = $usmodel->where("us_id", $tokendata['uid'])->first();
+            if (!$user) return $this->fail("invalid user", 400);
+        } else {
+            $data['ret_data'] = "Invalid user";
+            return $this->fail($data, 400);
+        }
+        if ($tokendata) {
+
+            $phone = $this->request->getVar('phone');
+
+            $res = $model
+                ->where('RIGHT(phone, 9)', substr($phone, -9)) // match only last 9 digits
+                ->where('lead_delete_flag', 0)
+                ->where('status_id !=', 7)
+                ->join('call_purposes', 'call_purposes.cp_id = purpose_id', 'left')
+                ->join('lead_status', 'lead_status.ld_sts_id = status_id', 'left')
+                ->join('lead_source', 'lead_source.ld_src_id = source_id', 'left')
+                ->findAll();
+
+            if ($res) {
+                $response = [
+                    'ret_data' => 'success',
+                    'LeadList' => $res
+                ];
+                return $this->respond($response, 200);
+            } else {
+                $response = [
+                    'ret_data' => 'fail',
+                    'LeadList' => ''
+                ];
+                return $this->respond($response, 200);
+            }
+        }
+    }
+
+    public function updateLeadVerificationFlag()
+    {
+        $model = new LeadModel();
+        $common = new Common();
+        $valid = new Validation();
+        $acmodel = new LeadActivityModel();
+
+        $heddata = $this->request->headers();
+        $tokendata = $common->decode_jwt_token($valid->getbearertoken($heddata['Authorization']));
+
+        if ($tokendata['aud'] == 'superadmin') {
+            $SuperModel = new SuperAdminModel();
+            $super = $SuperModel->where("s_adm_id", $tokendata['uid'])->first();
+            if (!$super) return $this->fail("invalid user", 400);
+        } else if ($tokendata['aud'] == 'user') {
+            $usmodel = new UserModel();
+            $user = $usmodel->where("us_id", $tokendata['uid'])->first();
+            if (!$user) return $this->fail("invalid user", 400);
+        } else {
+            $data['ret_data'] = "Invalid user";
+            return $this->fail($data, 400);
+        }
+        if ($tokendata) {
+
+            $data = [
+                'ld_verify_flag' => $this->request->getVar('ld_verify_flag'),
+            ];
+            $id = $this->db->escapeString($this->request->getVar('lead_id'));
+            if ($model->where('lead_id', $id)->set($data)->update() === false) {
+                $response = [
+                    'errors' => $model->errors(),
+                    'ret_data' => 'fail'
+                ];
+
+                return $this->fail($response, 409);
+            } else {
+                return $this->respond(['ret_data' => 'success'], 200);
+            }
+        }
+    }
+
+    public function updateCategoryOfLead()
+    {
+        $model = new LeadModel();
+        $common = new Common();
+        $valid = new Validation();
+
+        $heddata = $this->request->headers();
+        $tokendata = $common->decode_jwt_token($valid->getbearertoken($heddata['Authorization']));
+
+        if ($tokendata['aud'] == 'superadmin') {
+            $SuperModel = new SuperAdminModel();
+            $super = $SuperModel->where("s_adm_id", $tokendata['uid'])->first();
+            if (!$super) return $this->fail("invalid user", 400);
+        } else if ($tokendata['aud'] == 'user') {
+            $usmodel = new UserModel();
+            $user = $usmodel->where("us_id", $tokendata['uid'])->first();
+            if (!$user) return $this->fail("invalid user", 400);
+        } else {
+            $data['ret_data'] = "Invalid user";
+            return $this->fail($data, 400);
+        }
+        if ($tokendata) {
+            $data = [
+                'lead_category' => $this->request->getVar('type')
+            ];
+            $lead_id = $this->request->getVar('lead_id');
+            $lead_ipdate = $model->update($lead_id, $data);
+            if ($lead_ipdate) {
+                return $this->respond(['ret_data' => 'success'], 200);
+            } else {
+                return $this->respond(['ret_data' => 'fail'], 200);
             }
         }
     }

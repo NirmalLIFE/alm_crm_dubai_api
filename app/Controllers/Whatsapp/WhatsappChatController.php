@@ -21,6 +21,8 @@ use App\Models\Whatsapp\WhatsappAssignedStaffsModel;
 use App\Models\Whatsapp\WhatsappFollowupMessageTimeExceededLogs;
 use App\Models\Whatsapp\WhatsappCampaignMessageModel;
 use App\Models\Whatsapp\WhatsappCampaignModel;
+
+use App\Controllers\Settings\CommonSettings;
 use App\Models\Leads\AppointmentMasterModel;
 use App\Models\Leads\AppointmentModel;
 use App\Models\Leads\AppointmentLogModel;
@@ -60,6 +62,10 @@ class WhatsappChatController extends ResourceController
         $contact = $entry['changes'][0]['value']['contacts'][0] ?? [];
         $metadata = $entry['changes'][0]['value']['metadata'] ?? [];
         $common = new Common();
+        $user = new UserModel();
+        // log_message('error', 'right before getting fcm tokens');
+        $fcmTokens  = $user->select("us_fcm_token_mob")->where("login_status", 1)->where("us_fcm_token_mob IS NOT NULL", null, false)->findAll();
+        // log_message('error', json_encode($fcmTokens));
         try {
             if ($contact && $entry["id"] == 423892554135763) {
                 $wb_customer = new WhatsappCustomerMasterModel();
@@ -86,7 +92,9 @@ class WhatsappChatController extends ResourceController
                     ];
                     $wb_customer->where('wb_cus_mobile', $contact['wa_id'])->set($tracker_data)->update();
                 }
-                // log_message('error',  "I am here" . json_encode($msg_customer));
+                // log_message('error',  " msg_customer >>>>>>" . json_encode($msg_customer));
+                // log_message('error',  "message >>>>>>>>>" . json_encode($msg_customer['wb_cus_block']));
+
                 if (!$msg_customer['wb_cus_block']) {
                     $status = [1, 7, 8];    //->orWhere('status_id', '7')
                     $lmodel = new LeadModel();
@@ -95,10 +103,16 @@ class WhatsappChatController extends ResourceController
                     $last_lead = $lmodel->where('RIGHT(phone,9)',  substr($msg_customer['wb_cus_mobile'], -9))->orderBy('lead_id', 'desc')->first();
                     $exist_msg = $wb_message->where('alm_wb_msg_master_id', $message['id'])->findAll();
                     // log_message('error',  "check last lead list" . json_encode($last_lead));
-                    // log_message('error',  "I am here nil" . json_encode($exist_msg));
+                    // log_message('error',  "I am here nil exist message >>>>>" . json_encode($exist_msg));
+
                     if ($message && sizeof($exist_msg) == 0) {
 
                         // $oneHourAgo = (new DateTime())->modify('-1 hour')->format('Y-m-d H:i:s'); // One hour ago
+                        $currentDateTime = new DateTime();
+                        $currentDayOfWeek = $currentDateTime->format('w'); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+                        $currentTime = $currentDateTime->format('H:i:s'); // HH:MM:SS
+                        $currentDate = $currentDateTime->format('Y-m-d');
+
                         $row = $this->db->table('sequence_data')
                             ->select('whatsapp_auto_msg_hours')
                             ->get()
@@ -106,54 +120,182 @@ class WhatsappChatController extends ResourceController
                         $hoursAgo = $row ? (int) $row->whatsapp_auto_msg_hours : 1;
                         $timeAgo = (new DateTime())->modify("-{$hoursAgo} hour")->format('Y-m-d H:i:s');
 
-                        $currentDateTime = new DateTime();
-                        $currentDayOfWeek = $currentDateTime->format('w'); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
-                        $currentTime = $currentDateTime->format('H:i:s'); // HH:MM:SS
-                        $currentDate = $currentDateTime->format('Y-m-d');
+                        // $workingHours = [
+                        //     'Monday-Saturday' => [['08:55:00', '16:05:00'], ['19:55:00', '23:59:59'], ['00:00:00', '00:05:00']],
+                        //     'Friday'          => [['09:00:00', '11:55:00'], ['19:55:00', '23:59:59'], ['00:00:00', '00:05:00']]
+                        // ];
 
-                        log_message('error',  "I am oneHourAgo oneHourAgo" . json_encode($timeAgo));
 
-                        $workingHours = [
-                            'Monday-Saturday' => [['08:15:00', '20:10:00']],
+                        //OLD NONWORKING HOURS WORKING FLOEWS.... NEW ONE UNDER.......
 
-                            'Friday'          => [['08:15:00', '12:40:00'], ['14:20:00', '20:10:00']]
-                        ];
-                        $isNonWorkingHours = true; // Default to non-working
+                        // $workingHours = [
+                        //     'Monday-Saturday' => [['07:50:00', '20:10:00']],
+                        //     'Friday'          => [['07:50:00', '20:10:00']]
+                        // ];
 
-                        $nonWorkingDates = [
-                            '2025-06-05',
-                            '2025-06-06',
-                            '2025-06-07',
-                            '2025-06-08'
-                        ];
+                        // $nonWorkingDates = [
+                        //     '2025-06-05',
+                        //     '2025-06-06',
+                        //     '2025-06-07',
+                        //     '2025-06-08'
+                        // ];
 
-                        // ✅ Step 1: Check if it's a non-working holiday date
-                        if (in_array($currentDate, $nonWorkingDates)) {
+                        // $isNonWorkingHours = true; // Default to non-working
+
+                        // // ✅ Step 1: Check if it's a non-working holiday date
+                        // if (in_array($currentDate, $nonWorkingDates)) {
+                        //     $isNonWorkingHours = true;
+
+                        //     // ✅ Step 2: Check if it's Sunday
+                        // } elseif ($currentDayOfWeek == 0) {
+                        //     $isNonWorkingHours = true;
+
+                        //     // ✅ Step 3: Check if within allowed time slots for weekdays
+                        // } else {
+                        //     foreach ($workingHours as $days => $timeSlots) {
+                        //         if (
+                        //             ($days === 'Monday-Saturday' && ($currentDayOfWeek >= 1 && $currentDayOfWeek <= 4 || $currentDayOfWeek == 6)) ||
+                        //             ($days === 'Friday' && $currentDayOfWeek == 5)
+                        //         ) {
+                        //             foreach ($timeSlots as [$start, $end]) {
+                        //                 if ($currentTime >= $start && $currentTime <= $end) {
+                        //                     $isNonWorkingHours = false; // Inside working hours
+                        //                     break 2; // Exit both loops
+                        //                 }
+                        //             }
+                        //         }
+                        //     }
+                        // }
+                        $builder = $this->db->table('common_settings');
+                        $isNonWorkingHours = true;
+
+
+                        // Step 0: Fetch JSON from DB
+                        $row = $builder->where('cst_id', 1)->get()->getRow();
+                        // log_message('error', 'DB Row: ' . json_encode($row));
+
+                        $nonWorkingDates = [];
+
+                        if ($row && !empty($row->off_days)) {
+                            // Convert JSON to array of YYYY-MM-DD
+                            $nonWorkingDates = json_decode($row->off_days, true);
+                        }
+
+                        $currentDate = date('Y-m-d');
+                        $currentDay  = date('l'); // e.g. Monday, Tuesday, Sunday
+
+                        // ✅ Check 1: Is it Sunday?
+                        if ($currentDay === 'Sunday') {
                             $isNonWorkingHours = true;
+                        }
 
-                            // ✅ Step 2: Check if it's Sunday
-                        } elseif ($currentDayOfWeek == 0) {
+                        // ✅ Check 2: Is it a listed holiday?
+                        if (in_array($currentDate, $nonWorkingDates, true)) {
                             $isNonWorkingHours = true;
+                        }
 
-                            // ✅ Step 3: Check if within allowed time slots for weekdays
-                        } else {
-                            foreach ($workingHours as $days => $timeSlots) {
-                                if (
-                                    ($days === 'Monday-Saturday' && ($currentDayOfWeek >= 1 && $currentDayOfWeek <= 4 || $currentDayOfWeek == 6)) ||
-                                    ($days === 'Friday' && $currentDayOfWeek == 5)
-                                ) {
-                                    foreach ($timeSlots as [$start, $end]) {
-                                        if ($currentTime >= $start && $currentTime <= $end) {
-                                            $isNonWorkingHours = false; // Inside working hours
-                                            break 2; // Exit both loops
-                                        }
-                                    }
-                                }
+                        $workshopDays = [];
+                        if ($row && !empty($row->working_time_json)) {
+                            // log_message('error', 'Raw DB JSON: ' . $row->working_time_json);
+
+                            $decoded = json_decode($row->working_time_json, true);
+                            // log_message('error', 'Decoded JSON: ' . print_r($decoded, true));
+
+                            if (isset($decoded['workshopDays'])) {
+                                $workshopDays = $decoded['workshopDays'];
+                                // log_message('error', "Using 'workshopDays' key");
+                            } elseif (is_array($decoded)) {
+                                $workshopDays = $decoded;
+                                // log_message('error', "Using direct array");
                             }
                         }
 
+                        // log_message('error', 'WorkshopDays: ' . print_r($workshopDays, true));
+
+                        // Step 1: Non-working dates
+                        $nonWorkingDates = ['2025-06-05', '2025-06-06', '2025-06-07', '2025-06-08'];
+
+                        $currentDate     = date('Y-m-d');
+                        $currentDayName  = date('l');
+                        $currentTime     = date('H:i:s');
+
+                        // log_message('error', "Current Date: $currentDate");
+                        // log_message('error', "Current Day: $currentDayName");
+                        // log_message('error', "Current Time: $currentTime");
+
+
+                        if (in_array($currentDate, $nonWorkingDates, true)) {
+                            // log_message('error', "Today is a holiday (in nonWorkingDates)");
+                            // $isNonWorkingHours = true;
+                        } else {
+                            $today = null;
+                            foreach ($workshopDays as $day) {
+                                if ($day['name'] === $currentDayName) {
+                                    $today = $day;
+                                    break;
+                                }
+                            }
+                            // log_message('error', 'Today\'s Rule: ' . print_r($today, true));
+
+                            if ($today && !empty($today['open'])) {
+                                $start = $today['start'] ?: '00:00:00';
+                                $end   = $today['end']   ?: '23:59:59';
+
+                                if (strlen($start) === 5) $start .= ':00';
+                                if (strlen($end) === 5)   $end   .= ':00';
+
+                                // log_message('error', "Start Time: $start | End Time: $end");
+
+                                if ($currentTime >= $start && $currentTime <= $end) {
+                                    // ✅ Inside main working hours, now check if inside break
+                                    if (!empty($today['noonStart']) && !empty($today['noonEnd'])) {
+                                        $noonStart = $today['noonStart'];
+                                        $noonEnd   = $today['noonEnd'];
+
+                                        if (strlen($noonStart) === 5) $noonStart .= ':00';
+                                        if (strlen($noonEnd) === 5)   $noonEnd   .= ':00';
+
+                                        // log_message('error', "Break: $noonStart - $noonEnd");
+
+                                        if ($currentTime >= $noonStart && $currentTime <= $noonEnd) {
+                                            // log_message('error', "❌ Inside lunch break → Not working hours");
+                                            $isNonWorkingHours = true;
+                                        } else {
+                                            // log_message('error', "✅ Working hours (not in break)");
+                                            $isNonWorkingHours = false;
+                                        }
+                                    } else {
+                                        // log_message('error', "✅ Working hours (no break defined)");
+                                        $isNonWorkingHours = false;
+                                    }
+                                } else {
+                                    // log_message('error', "❌ Outside working hours");
+                                }
+                            } else {
+                                // log_message('error', "❌ Today is closed");
+                            }
+                        }
+
+                        // log_message('error', 'Final isNonWorkingHours = ' . ($isNonWorkingHours ? 'true' : 'false'));
+
+                        // Step 2: Generate WhatsApp message content
+                        $working_hours_content = $this->generateGroupedWorkshopHoursMessage($workshopDays);
+
+                        // log_message('error', "Generated WhatsApp Message:\n" . $working_hours_content);
+
+
+                        // $isNightTime = ($currentTime >= $eveningStart || $currentTime < $morningEnd);
+
+                        // $isWeekendNightTime = (
+                        //     ($currentDayOfWeek == 6 && $currentTime >= $eveningStart) || // Saturday evening
+                        //     ($currentDayOfWeek == 0) || // All of Sunday
+                        //     ($currentDayOfWeek == 1 && $currentTime < $morningEnd) // Monday before 7:45 AM
+                        // );
+
                         $wb_customer_data = $wb_customer->where('wb_cus_mobile', $contact['wa_id'])->select('wb_cus_id')->first();
                         $wb_cus_id = $wb_customer_data ? $wb_customer_data['wb_cus_id'] : null;
+
+                        // log_message('error',  "Checking Away Message >>>>>" . json_encode($wb_cus_id));
 
                         $messaged = $wb_message->where('alm_wb_msg_customer', $wb_cus_id)
                             ->like('alm_wb_msg_content', "Thank you for reaching out")
@@ -161,6 +303,16 @@ class WhatsappChatController extends ResourceController
                             ->orderBy('alm_wb_msg_id', 'DESC')
                             ->first();
 
+                        $lastApptMessage = $wb_message->where('alm_wb_msg_customer', $wb_cus_id)
+                            ->like('alm_wb_msg_caption', "Greetings from Al Maraghi Auto Repairs")
+                            ->where('alm_wb_msg_created_on >=', $timeAgo)
+                            ->orderBy('alm_wb_msg_id', 'DESC')
+                            ->first();
+
+                        // Send message only if no recent message was sent
+
+
+                        // log_message('error',  "Checking Away Message >>>>>" . json_encode($lastApptMessage));
 
                         $microtime = microtime(true);
                         $seconds = floor($microtime);
@@ -189,10 +341,26 @@ class WhatsappChatController extends ResourceController
                                 'fromUserId' => $msg_customer
                             ];
                             $this->sendSocketMessage($data);
+
                             // $this->sendWelcomeMessage($msg_customer);
+
+
+                            //sending notfication to the customer..
+
+                            // $message = "{$msg_customer['wb_cus_name']}  {$message['text']['body']}";
+                            // $title = "{$msg_customer['wb_cus_name']}";
+
+                            // foreach ($fcmTokens as $tokenObj) {
+
+                            //     $token = $tokenObj['us_fcm_token_mob'];
+                            //     $response =  $common->send_notification($token, $title, $message);
+                            //     log_message('error', "Notification sent to token: $token. Response: $response");
+                            // }
+
+                            //sending notfication to the customer ends here..
                         }
                         if ($message['type'] == 'button') {
-                            // $replyId = $wb_message->select('alm_wb_msg_id')->where('alm_wb_msg_master_id',$message['context']['id'])->first();
+                            // $replyId = $wb_message->select('alm_wb_msg_id')->where('alm_wb_msg_master_id', $message['context']['id'])->first();
                             $replyId = $message['context']['id'];
                             $message_data = [
                                 'alm_wb_msg_master_id' => $message['id'],
@@ -216,7 +384,16 @@ class WhatsappChatController extends ResourceController
                                 'fromUserId' => $msg_customer
                             ];
                             $this->sendSocketMessage($data);
-                            // $this->sendWelcomeMessage($msg_customer);
+
+                            // $sr_ids = $wb_message->where('alm_wb_msg_customer', $msg_customer['wb_cus_id'])
+                            //     ->groupStart() // Start grouping LIKE conditions
+                            //     ->like('alm_wb_msg_content', 'Get your Free Pick up & Drop')
+                            //     ->orLike('alm_wb_msg_content', 'Time for Your Factory Recommended Service')
+                            //     ->orLike('alm_wb_msg_content', 'Service Reminder')
+                            //     ->groupEnd() // End grouping
+                            //     ->select('alm_wb_msg_master_id')
+                            //     ->orderBy('alm_wb_msg_master_id', 'DESC') // Get the latest message
+                            //     ->first(); // Get only the latest matching record
 
                             $one_year_after_sr_ids = $wb_message->where('alm_wb_msg_customer', $msg_customer['wb_cus_id'])
                                 ->like('alm_wb_msg_content', 'Get your Free Pick up & Drop')
@@ -233,10 +410,17 @@ class WhatsappChatController extends ResourceController
                                 ->select('alm_wb_msg_master_id')
                                 ->findAll();
 
+                            // log_message('error',  "eight_month_sr_ids >>>>>" . json_encode($sr_ids->alm_wb_msg_master_id));
+
 
                             $one_year_after_sr_ids = array_column($one_year_after_sr_ids, 'alm_wb_msg_master_id');
                             $one_year_sr_ids = array_column($one_year_sr_ids, 'alm_wb_msg_master_id');
                             $eight_month_sr_ids = array_column($eight_month_sr_ids, 'alm_wb_msg_master_id');
+
+                            // log_message('error',  "eight_month_sr_ids >>>>>" . json_encode($eight_month_sr_ids));
+                            // log_message('error',  "one_year_sr_ids >>>>>" . json_encode($one_year_sr_ids));
+                            // log_message('error',  "one_year_after_sr_ids >>>>>" . json_encode($one_year_after_sr_ids));
+                            // log_message('error',  "replyId >>>>>" . json_encode($replyId));
 
 
                             // Check if reply_id matches one_year_sr_ids
@@ -250,24 +434,24 @@ class WhatsappChatController extends ResourceController
                                         ->orderBy('alm_wb_camp_msg_id', 'DESC')
                                         ->first();
 
-                                    $alertMessage = "🔔 Appointment Selection Alert\n\n"
-                                        . "Hello,\n\n"
-                                        . "Customer Number [ " . $contact['wa_id'] . " ] has selected the *Book an Appointment* option.\n\n"
-                                        . "🚗 Reg No: " . ($reg_no ? $reg_no['alm_wb_camp_msg_cus_reg_no'] : 'N/A') . "\n\n"
-                                        . "Please take note. ✅";
+                                    // $alertMessage = "🔔 Appointment Selection Alert\n\n"
+                                    //     . "Hello,\n\n"
+                                    //     . "Customer Number [ " . $contact['wa_id'] . " ] has selected the *Book an Appointment* option.\n\n"
+                                    //     . "🚗 Reg No: " . ($reg_no ? $reg_no['alm_wb_camp_msg_cus_reg_no'] : 'N/A') . "\n\n"
+                                    //     . "Please take note. ✅";
 
 
-                                    $messageData = array(
-                                        "messaging_product" => "whatsapp",
-                                        "recipient_type" => "individual",
-                                        "to" => "+971503689528",
-                                        "type" => "text",
-                                        "text" => array(
-                                            "body" => $alertMessage
-                                        )
-                                    );
+                                    // $messageData = array(
+                                    //     "messaging_product" => "whatsapp",
+                                    //     "recipient_type" => "individual",
+                                    //     "to" => "+918138055705",
+                                    //     "type" => "text",
+                                    //     "text" => array(
+                                    //         "body" => $alertMessage
+                                    //     )
+                                    // );
 
-                                    $returnMsg = $common->sendCustomerWhatsappMessage($messageData, '971509766075');
+                                    // $returnMsg = $common->sendCustomerWhatsappMessage($messageData, '971509766075');
                                 } else if ($message['button']['text'] == 'Remind Me Later') {
                                     // $this->oneYearExceededRemindMeLater($contact, $msg_customer);
                                     // Calculate the reminder date
@@ -349,22 +533,22 @@ class WhatsappChatController extends ResourceController
                                         ->orderBy('alm_wb_camp_msg_id', 'DESC')
                                         ->first();
 
-                                    $alertMessage = "🔔 Appointment Selection Alert\n\n"
-                                        . "Hello,\n\n"
-                                        . "Customer Number [ " . $contact['wa_id'] . " ] has selected the *Book an Appointment* option.\n\n"
-                                        . "🚗 Reg No: " . ($reg_no ? $reg_no['alm_wb_camp_msg_cus_reg_no'] : 'N/A') . "\n\n"
-                                        . "Please take note. ✅";
-                                    $messageData = array(
-                                        "messaging_product" => "whatsapp",
-                                        "recipient_type" => "individual",
-                                        "to" => "+971503689528",
-                                        "type" => "text",
-                                        "text" => array(
-                                            "body" => $alertMessage
-                                        )
-                                    );
+                                    // $alertMessage = "🔔 Appointment Selection Alert\n\n"
+                                    //     . "Hello,\n\n"
+                                    //     . "Customer Number [ " . $contact['wa_id'] . " ] has selected the *Book an Appointment* option.\n\n"
+                                    //     . "🚗 Reg No: " . ($reg_no ? $reg_no['alm_wb_camp_msg_cus_reg_no'] : 'N/A') . "\n\n"
+                                    //     . "Please take note. ✅";
+                                    // $messageData = array(
+                                    //     "messaging_product" => "whatsapp",
+                                    //     "recipient_type" => "individual",
+                                    //     "to" => "+918138055705",
+                                    //     "type" => "text",
+                                    //     "text" => array(
+                                    //         "body" => $alertMessage
+                                    //     )
+                                    // );
 
-                                    $returnMsg = $common->sendCustomerWhatsappMessage($messageData, '971509766075');
+                                    // $returnMsg = $common->sendCustomerWhatsappMessage($messageData, '971509766075');
                                 } else if ($message['button']['text'] == 'Remind Me Later') {
                                     // $this->oneYearRemindMeLater($contact, $msg_customer);
                                     // Calculate the reminder date
@@ -445,22 +629,22 @@ class WhatsappChatController extends ResourceController
                                         ->orderBy('alm_wb_camp_msg_id', 'DESC')
                                         ->first();
 
-                                    $alertMessage = "🔔 Appointment Selection Alert\n\n"
-                                        . "Hello,\n\n"
-                                        . "Customer Number [ " . $contact['wa_id'] . " ] has selected the *Book an Appointment* option.\n\n"
-                                        . "🚗 Reg No: " . ($reg_no ? $reg_no['alm_wb_camp_msg_cus_reg_no'] : 'N/A') . "\n\n"
-                                        . "Please take note. ✅";
-                                    $messageData = array(
-                                        "messaging_product" => "whatsapp",
-                                        "recipient_type" => "individual",
-                                        "to" => "+971503689528",
-                                        "type" => "text",
-                                        "text" => array(
-                                            "body" => $alertMessage
-                                        )
-                                    );
+                                    // $alertMessage = "🔔 Appointment Selection Alert\n\n"
+                                    //     . "Hello,\n\n"
+                                    //     . "Customer Number [ " . $contact['wa_id'] . " ] has selected the *Book an Appointment* option.\n\n"
+                                    //     . "🚗 Reg No: " . ($reg_no ? $reg_no['alm_wb_camp_msg_cus_reg_no'] : 'N/A') . "\n\n"
+                                    //     . "Please take note. ✅";
+                                    // $messageData = array(
+                                    //     "messaging_product" => "whatsapp",
+                                    //     "recipient_type" => "individual",
+                                    //     "to" => "+918138055705",
+                                    //     "type" => "text",
+                                    //     "text" => array(
+                                    //         "body" => $alertMessage
+                                    //     )
+                                    // );
 
-                                    $returnMsg = $common->sendCustomerWhatsappMessage($messageData, '971509766075');
+                                    // $returnMsg = $common->sendCustomerWhatsappMessage($messageData, '971509766075');
                                 } else if ($message['button']['text'] == 'Remind Me Later') {
                                     // $this->remindMeLater($contact, $msg_customer);
                                     // Calculate the reminder date
@@ -532,9 +716,11 @@ class WhatsappChatController extends ResourceController
                                 ];
                                 $wb_customer->where('wb_cus_id', $msg_customer['wb_cus_id'])->set($tracker_reminder_data)->update();
                             }
+
+                            // $this->sendWelcomeMessage($msg_customer);
                         } else if ($message['type'] == 'image') {
                             $media_url = $common->downloadWhatsappMedia($message['image']['id'], 5);
-                            log_message('error', 'Webhook Error: ' .  $media_url);
+                            // log_message('error', 'Webhook Error: ' .  $media_url);
                             $message_data = [
                                 'alm_wb_msg_master_id' => $message['id'],
                                 'alm_wb_msg_source' => 1,
@@ -583,6 +769,18 @@ class WhatsappChatController extends ResourceController
                                 'fromUserId' => $msg_customer
                             ];
                             $this->sendSocketMessage($data);
+
+                            //sending notfication to the customer..
+                            // $message = "{$msg_customer['wb_cus_name']}  sent you a audio";
+                            // $title = "{$msg_customer['wb_cus_name']}";
+                            // foreach ($fcmTokens as $tokenObj) {
+
+                            //     $token = $tokenObj['us_fcm_token_mob'];
+                            //     $response =  $common->send_notification($token, $title, $message);
+                            //     log_message('error', "Notification  audio sent to token: $token. Response: $response");
+                            // }
+                            //sending notfication to the customer ends here ..
+
                             // $this->sendWelcomeMessage($msg_customer);
                         } else if ($message['type'] == 'video') {
                             $media_url = $common->downloadWhatsappMedia($message['video']['id'], 1);
@@ -609,6 +807,18 @@ class WhatsappChatController extends ResourceController
                                 'fromUserId' => $msg_customer
                             ];
                             $this->sendSocketMessage($data);
+
+                            //sending notfication to the customer..
+                            // $message = "{$msg_customer['wb_cus_name']}  sent you a video";
+                            // $title = "{$msg_customer['wb_cus_name']}";
+                            // foreach ($fcmTokens as $tokenObj) {
+
+                            //     $token = $tokenObj['us_fcm_token_mob'];
+                            //     $response =  $common->send_notification($token, $title, $message);
+                            //     log_message('error', "Notification  video sent to token: $token. Response: $response");
+                            // }
+                            //sending notfication to the customer ends here ..
+
                             // $this->sendWelcomeMessage($msg_customer);
                         } else if ($message['type'] == 'sticker') {
                             $media_url = $common->downloadWhatsappMedia($message['sticker']['id'], 1);
@@ -658,7 +868,6 @@ class WhatsappChatController extends ResourceController
                                 'fromUserId' => $msg_customer
                             ];
                             $this->sendSocketMessage($data);
-                            // $this->sendWelcomeMessage($msg_customer);
 
                             $eightMonthQuery = $this->db->table('alm_whatsapp_cus_messages')
                                 ->select('alm_wb_msg_id, alm_wb_msg_content')
@@ -678,10 +887,17 @@ class WhatsappChatController extends ResourceController
                             $service_Reminder = $wb_customer->select('wb_cus_reminder')
                                 ->where('wb_cus_id', $msg_customer['wb_cus_id'])
                                 ->get()
-                                ->getRow('wb_cus_reminder');
+                                ->getRow('wb_cus_reminder'); // Directly fetch the column value
+
+                            // log_message('error',  "service_Reminder 455 >>service_Reminder>>>" . json_encode($service_Reminder));
+                            // log_message('error',  "query line 455 >>>>>" . json_encode($eightMonthQuery));
+                            // log_message('error',  "query line 455 >>>>>" . json_encode($oneYearQuery));
+
 
                             $secondLastMessage = $eightMonthQuery->getRow();
                             $thirdLastMessage = $oneYearQuery->getRow();
+                            // log_message('error',  "I am secondLastMessage->alm_wb_msg_content  459 >>>>>" . json_encode($secondLastMessage->alm_wb_msg_content));
+                            // log_message('error',  "I am thirdLastMessage->alm_wb_msg_content   460 >>>>>" . json_encode($thirdLastMessage->alm_wb_msg_content));
 
                             if (strpos($secondLastMessage->alm_wb_msg_content, 'Paid Pick & Drop') !== false && $service_Reminder != '5') {
                                 $this->getCustomerAppointmentDate($contact, $msg_customer);
@@ -750,46 +966,40 @@ class WhatsappChatController extends ResourceController
 
                                 if ($message['interactive']['button_reply']['id'] == 'Paid_Pick_&_Drop') {
 
-                                    log_message('error',  "I am here in line 730" . json_encode($msg_customer));
 
                                     $tracker_pick_drop_data = [
                                         'wb_cus_id ' => $msg_customer['wb_cus_id'],
                                         'wb_cus_pick_drop' => 5,  //5- Paid Pick & Drop
                                     ];
-
                                     $wb_customer->where('wb_cus_id', $msg_customer['wb_cus_id'])->set($tracker_pick_drop_data)->update();
-                                    log_message('error',  "I am here in line 737" . json_encode($msg_customer));
-
-
                                     $this->driverOrRecoveryPickUp($contact, $msg_customer);
 
                                     $pickDropOption = $message['interactive']['button_reply']['title'];
 
                                     $contact_last_9 = substr($contact['wa_id'], -9);
-
                                     $reg_no = $wb_camp_message
                                         ->where("RIGHT(alm_wb_camp_msg_cus_phone, 9)", $contact_last_9)
                                         ->select('alm_wb_camp_msg_cus_reg_no')
                                         ->orderBy('alm_wb_camp_msg_id', 'DESC')
                                         ->first();
 
-                                    $alertMessage = "🚗 Pick & Drop-Off Alert\n\n"
-                                        . "Hello,\n\n"
-                                        . "Customer Number [ " . $contact['wa_id'] . " ] has selected *" . $pickDropOption . "* for their appointment.\n\n"
-                                        . "🚗 Reg No: " . ($reg_no ? $reg_no['alm_wb_camp_msg_cus_reg_no'] : 'N/A') . "\n\n"
-                                        . "Please take note. ✅";
+                                    // $alertMessage = "🚗 Pick & Drop-Off Alert\n\n"
+                                    //     . "Hello,\n\n"
+                                    //     . "Customer Number [ " . $contact['wa_id'] . " ] has selected *" . $pickDropOption . "* for their appointment.\n\n"
+                                    //     . "🚗 Reg No: " . ($reg_no ? $reg_no['alm_wb_camp_msg_cus_reg_no'] : 'N/A') . "\n\n"
+                                    //     . "Please take note. ✅";
 
-                                    $messageData = array(
-                                        "messaging_product" => "whatsapp",
-                                        "recipient_type" => "individual",
-                                        "to" => "+971503689528",
-                                        "type" => "text",
-                                        "text" => array(
-                                            "body" =>  $alertMessage
-                                        )
-                                    );
+                                    // $messageData = array(
+                                    //     "messaging_product" => "whatsapp",
+                                    //     "recipient_type" => "individual",
+                                    //     "to" => "+918138055705",
+                                    //     "type" => "text",
+                                    //     "text" => array(
+                                    //         "body" =>  $alertMessage
+                                    //     )
+                                    // );
 
-                                    $returnMsg = $common->sendCustomerWhatsappMessage($messageData, '971509766075');
+                                    // $returnMsg = $common->sendCustomerWhatsappMessage($messageData, '971509766075');
                                 } else if ($message['interactive']['button_reply']['id'] == 'Drop-off') {
                                     $tracker_pick_drop_data = [
                                         'wb_cus_id ' => $msg_customer['wb_cus_id'],
@@ -808,23 +1018,23 @@ class WhatsappChatController extends ResourceController
                                         ->orderBy('alm_wb_camp_msg_id', 'DESC')
                                         ->first();
 
-                                    $alertMessage = "🚗 Pick & Drop-Off Alert\n\n"
-                                        . "Hello,\n\n"
-                                        . "Customer Number [ " . $contact['wa_id'] . " ] has selected *" . $pickDropOption . "* for their appointment.\n\n"
-                                        . "🚗 Reg No: " . ($reg_no ? $reg_no['alm_wb_camp_msg_cus_reg_no'] : 'N/A') . "\n\n"
-                                        . "Please take note. ✅";
+                                    // $alertMessage = "🚗 Pick & Drop-Off Alert\n\n"
+                                    //     . "Hello,\n\n"
+                                    //     . "Customer Number [ " . $contact['wa_id'] . " ] has selected *" . $pickDropOption . "* for their appointment.\n\n"
+                                    //     . "🚗 Reg No: " . ($reg_no ? $reg_no['alm_wb_camp_msg_cus_reg_no'] : 'N/A') . "\n\n"
+                                    //     . "Please take note. ✅";
 
-                                    $messageData = array(
-                                        "messaging_product" => "whatsapp",
-                                        "recipient_type" => "individual",
-                                        "to" => "+971503689528",
-                                        "type" => "text",
-                                        "text" => array(
-                                            "body" =>  $alertMessage
-                                        )
-                                    );
+                                    // $messageData = array(
+                                    //     "messaging_product" => "whatsapp",
+                                    //     "recipient_type" => "individual",
+                                    //     "to" => "+918138055705",
+                                    //     "type" => "text",
+                                    //     "text" => array(
+                                    //         "body" =>  $alertMessage
+                                    //     )
+                                    // );
 
-                                    $returnMsg = $common->sendCustomerWhatsappMessage($messageData, '971509766075');
+                                    // $returnMsg = $common->sendCustomerWhatsappMessage($messageData, '971509766075');
                                 } else if ($message['interactive']['button_reply']['id'] == 'driver' || $message['interactive']['button_reply']['id'] == 'recovery') {
 
                                     $pickup_mode = ($message['interactive']['button_reply']['id'] == 'driver') ? 1 : 2;
@@ -865,23 +1075,23 @@ class WhatsappChatController extends ResourceController
                                         ->orderBy('alm_wb_camp_msg_id', 'DESC')
                                         ->first();
 
-                                    $alertMessage = "🚗 Pick & Drop-Off Alert\n\n"
-                                        . "Hello,\n\n"
-                                        . "Customer Number [ " . $contact['wa_id'] . " ] has selected *" . $pickDropOption . "* for their appointment.\n\n"
-                                        . "🚗 Reg No: " . ($reg_no ? $reg_no['alm_wb_camp_msg_cus_reg_no'] : 'N/A') . "\n\n"
-                                        . "Please take note. ✅";
+                                    // $alertMessage = "🚗 Pick & Drop-Off Alert\n\n"
+                                    //     . "Hello,\n\n"
+                                    //     . "Customer Number [ " . $contact['wa_id'] . " ] has selected *" . $pickDropOption . "* for their appointment.\n\n"
+                                    //     . "🚗 Reg No: " . ($reg_no ? $reg_no['alm_wb_camp_msg_cus_reg_no'] : 'N/A') . "\n\n"
+                                    //     . "Please take note. ✅";
 
-                                    $messageData = array(
-                                        "messaging_product" => "whatsapp",
-                                        "recipient_type" => "individual",
-                                        "to" => "+971503689528",
-                                        "type" => "text",
-                                        "text" => array(
-                                            "body" =>  $alertMessage
-                                        )
-                                    );
+                                    // $messageData = array(
+                                    //     "messaging_product" => "whatsapp",
+                                    //     "recipient_type" => "individual",
+                                    //     "to" => "+918138055705",
+                                    //     "type" => "text",
+                                    //     "text" => array(
+                                    //         "body" =>  $alertMessage
+                                    //     )
+                                    // );
 
-                                    $returnMsg = $common->sendCustomerWhatsappMessage($messageData, '971509766075');
+                                    // $returnMsg = $common->sendCustomerWhatsappMessage($messageData, '971509766075');
                                 } else if ($message['interactive']['button_reply']['id'] == 'yes_paid') {
                                     $tracker_pick_drop_data = [
                                         'wb_cus_id ' => $msg_customer['wb_cus_id'],
@@ -899,19 +1109,19 @@ class WhatsappChatController extends ResourceController
                                     $this->notInterestedCustomers($contact, $msg_customer);
                                 } else if ($message['interactive']['button_reply']['id'] == 'Book_An_Appointment') {
                                     $this->pickupAndDropoff($contact, $msg_customer);
-                                    $alertMessage = "🔔 Appointment Selection Alert\n\nHello,\n\nCustomer Number [ " . $contact['wa_id'] . " ] has selected the *Book an Appointment* option.\n\nPlease take note. ✅";
+                                    // $alertMessage = "🔔 Appointment Selection Alert\n\nHello,\n\nCustomer Number [ " . $contact['wa_id'] . " ] has selected the *Book an Appointment* option.\n\nPlease take note. ✅";
 
-                                    $messageData = array(
-                                        "messaging_product" => "whatsapp",
-                                        "recipient_type" => "individual",
-                                        "to" => "+971503689528",
-                                        "type" => "text",
-                                        "text" => array(
-                                            "body" => $alertMessage
-                                        )
-                                    );
+                                    // $messageData = array(
+                                    //     "messaging_product" => "whatsapp",
+                                    //     "recipient_type" => "individual",
+                                    //     "to" => "+918138055705",
+                                    //     "type" => "text",
+                                    //     "text" => array(
+                                    //         "body" => $alertMessage
+                                    //     )
+                                    // );
 
-                                    $returnMsg = $common->sendCustomerWhatsappMessage($messageData, '971509766075');
+                                    // $returnMsg = $common->sendCustomerWhatsappMessage($messageData, '971509766075');
                                     $tracker_reminder_data = [
                                         'wb_cus_id ' => $msg_customer['wb_cus_id'],
                                         'wb_cus_reminder' => 6,  //Non Working Hours Appointment
@@ -922,13 +1132,24 @@ class WhatsappChatController extends ResourceController
                                         "alm_wb_msg_source"   => "2",
                                         "alm_wb_msg_staff_id" => "18",
                                         "alm_wb_msg_type"     => "4",
-                                        "alm_wb_msg_content" => "Working Hours:\n\nMonday to Thursday & Saturday:\n⏰ *8:30 AM to 8:00 PM*\n\nFriday:\n⏰ *8:30 AM to 12:30 PM*\n⏰ *2:30 PM to 8:00 PM*",
+                                        "alm_wb_msg_content" =>  $working_hours_content,
+                                        // "alm_wb_msg_content" => "Working Hours:\n\nMonday to Thursday & Saturday:\n⏰ *8:00 AM to 7:00 PM*\n\nFriday:\n⏰ *8:00 AM to 12:30 PM*\n⏰ *2:30 PM to 7:00 PM*",
                                         "alm_wb_msg_status"   => 1,
                                         "alm_wb_msg_customer" => $msg_customer['wb_cus_id'],
                                         "alm_wb_msg_mobile"   => $contact['wa_id'],
                                     ];
 
                                     $this->sendAwayMessageToCustomer($awayData);
+
+                                    // $awayMessaged = $wb_message->where('alm_wb_msg_customer', $wb_cus_id)
+                                    //     ->like('alm_wb_msg_content', "We are currently unavailable")
+                                    //     ->where('alm_wb_msg_created_on >=', $timeAgo)
+                                    //     ->orderBy('alm_wb_msg_id', 'DESC')
+                                    //     ->first();
+
+                                    // if (!$awayMessaged) {
+                                    //     $this->sendAwayMessageToCustomer($awayData);
+                                    // }
                                 } else if ($message['interactive']['button_reply']['id'] == 'leave_message') {
                                     $awayData = [
                                         "alm_wb_msg_source"   => "2",
@@ -942,30 +1163,6 @@ class WhatsappChatController extends ResourceController
 
                                     $this->sendLeaveAMessageToCustomer($awayData);
                                 }
-                                //                                 else if ($message['interactive']['button_reply']['id'] == 'chat_with_us') {
-                                //                                     $awayData = [
-                                //                                         "alm_wb_msg_source"   => "2",
-                                //                                         "alm_wb_msg_staff_id" => "18",
-                                //                                         "alm_wb_msg_type"     => "4",
-                                //                                         "alm_wb_msg_content" => "We are currently unavailable but will get back to you during our working hours.\n
-                                // Working Hours:\n
-                                // Monday to Thursday & Saturday:\n⏰ *8:30 AM to 7:00 PM*\n
-                                // Friday:\n⏰ *8:30 AM to 12:30 PM*\n⏰ *2:30 PM to 7:00 PM*",
-                                //                                         "alm_wb_msg_status"   => 1,
-                                //                                         "alm_wb_msg_customer" => $msg_customer['wb_cus_id'],
-                                //                                         "alm_wb_msg_mobile"   => $contact['wa_id'],
-                                //                                     ];
-
-                                //                                     $awayMessaged = $wb_message->where('alm_wb_msg_customer', $wb_cus_id)
-                                //                                         ->like('alm_wb_msg_content', "We are currently unavailable")
-                                //                                         ->where('alm_wb_msg_created_on >=', $timeAgo)
-                                //                                         ->orderBy('alm_wb_msg_id', 'DESC')
-                                //                                         ->first();
-
-                                //                                     if ($awayMessaged) {
-                                //                                         $this->sendAwayMessageToCustomer($awayData);
-                                //                                     }
-                                //                                 }
                             } else if ($message['interactive']['type'] == 'list_reply') {
                                 if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $message['interactive']['list_reply']['id'])) {
                                     // log_message('error',  "Ready to create an appointment");
@@ -1123,8 +1320,282 @@ class WhatsappChatController extends ResourceController
                                         }
                                     }
                                 }
+                                // else if (
+                                //     $message['interactive']['list_reply']['id'] == '8M_7' || $message['interactive']['list_reply']['id'] == '8M_14'
+                                //     || $message['interactive']['list_reply']['id'] == '8M_21' || $message['interactive']['list_reply']['id'] == '8M_30'
+                                // ) {
+                                //     $message_data = [
+                                //         'alm_wb_msg_master_id' => $message['id'],
+                                //         'alm_wb_msg_source' => 1,
+                                //         'alm_wb_msg_type' => 4,
+                                //         'alm_wb_msg_content' => $message['interactive']['list_reply']['title'],
+                                //         'alm_wb_msg_status' => 2,
+                                //         'alm_wb_msg_customer' => $msg_customer['wb_cus_id'],
+                                //         'alm_wb_msg_reply_id' => '',
+                                //         'alm_wb_msg_created_on' => $formattedDate,
+                                //         'alm_wb_msg_updated_on' => $formattedDate,
+                                //     ];
+                                //     $wb_message->insert($message_data);
+                                //     $data = [
+                                //         'room_id' => 'crm_' . $msg_customer['wb_cus_mobile'],
+                                //         'message_type' => 4,
+                                //         'message_source' => 1,
+                                //         'message' => $message['interactive']['list_reply']['title'],
+                                //         'time' => date('Y-m-d H:i:s'),
+                                //         'toUserId' => 0,
+                                //         'fromUserId' => $msg_customer
+                                //     ];
+                                //     $reminderDays = (int) str_replace("8M_", "", $message['interactive']['list_reply']['id']);
+                                //     // Calculate the reminder date
+                                //     $wb_cus_remind_date = date('Y-m-d', strtotime("+$reminderDays days"));
+                                //     $tracker_data = [
+                                //         'wb_cus_remind_date' => $wb_cus_remind_date,
+                                //         'wb_cus_remind_flag' => 1,  // Need To Remind
+                                //         'wb_cus_assigned' => 19
+                                //     ];
+                                //     $wb_customer->where('wb_cus_id', $msg_customer['wb_cus_id'])->set($tracker_data)->update();
+                                //     $this->sendSocketMessage($data);
+                                //     $messageData = array(
+                                //         "messaging_product" => "whatsapp",
+                                //         "recipient_type" => "individual",
+                                //         "to" => $contact['wa_id'],
+                                //         "type" => "text",
+                                //         "text" => array(
+                                //             "body" => "⏳ We will remind you in *" . $message['interactive']['list_reply']['title'] . "(" . $wb_cus_remind_date . ").* Please stay tuned! 📲"
+                                //         )
+                                //     );
+                                //     $returnMsg = $common->sendCustomerWhatsappMessage($messageData, '971509766075');
+                                //     if (isset($returnMsg->messages)) {
+                                //         if ($returnMsg->messages[0]->id != "") {
+
+                                //             $message_data = [
+                                //                 'alm_wb_msg_master_id' => $returnMsg->messages[0]->id,
+                                //                 'alm_wb_msg_source' => 2,
+                                //                 'alm_wb_msg_type' => 4,
+                                //                 'alm_wb_msg_content' => $messageData['text']['body'],
+                                //                 'alm_wb_msg_status' => 1,
+                                //                 'alm_wb_msg_customer' => $msg_customer['wb_cus_id'],
+                                //                 'alm_wb_msg_reply_id' => '',
+                                //                 'alm_wb_msg_created_on' => date("Y-m-d H:i:s.u"),
+                                //                 'alm_wb_msg_updated_on' => date("Y-m-d H:i:s.u"),
+                                //                 'alm_wb_msg_staff_id' => 1,
+                                //             ];
+                                //             $result = $wb_message->insert($message_data);
+                                //             $data = [
+                                //                 'room_id' => 'crm_' . $msg_customer['wb_cus_mobile'],
+                                //                 'message_type' => 4,
+                                //                 'message_source' => 2,
+                                //                 'message' => $messageData['text']['body'],
+                                //                 'time' => date('Y-m-d H:i:s'),
+                                //                 'toUserId' => 1,
+                                //                 'fromUserId' => $msg_customer
+                                //             ];
+                                //             $this->sendSocketMessage($data);
+                                //             $mobile = $msg_customer['wb_cus_mobile'];
+                                //             $currentFollowUp = $wb_customer->where('wb_cus_mobile', $mobile)->select('wb_cus_follow_up')->first();
+                                //             if ($currentFollowUp) {
+                                //                 $followUpCount = $currentFollowUp['wb_cus_follow_up'];
+                                //                 if ($followUpCount < 3 && $followUpCount != 1 && $followUpCount != 0) {
+                                //                     $followUpCount++;
+                                //                 } else if ($followUpCount == 3) {
+                                //                     $followUpCount = 6;
+                                //                 } else if ($followUpCount == 1) {
+                                //                     $followUpCount = 2;
+                                //                 }
+                                //                 $tracker_data = [
+                                //                     'wb_cus_follow_up' => $followUpCount,
+                                //                     'wb_cus_follow_up_time' => date('Y-m-d H-i-s'),
+                                //                 ];
+                                //                 $wb_customer->where('wb_cus_mobile', $mobile)->set($tracker_data)->update();
+                                //             }
+                                //         }
+                                //     }
+                                // } 
+                                // else if (
+                                //     $message['interactive']['list_reply']['id'] == '1Y_7' || $message['interactive']['list_reply']['id'] == '1Y_14'
+                                //     || $message['interactive']['list_reply']['id'] == '1Y_21' || $message['interactive']['list_reply']['id'] == '1Y_30'
+                                // ) {
+                                //     $message_data = [
+                                //         'alm_wb_msg_master_id' => $message['id'],
+                                //         'alm_wb_msg_source' => 1,
+                                //         'alm_wb_msg_type' => 4,
+                                //         'alm_wb_msg_content' => $message['interactive']['list_reply']['title'],
+                                //         'alm_wb_msg_status' => 2,
+                                //         'alm_wb_msg_customer' => $msg_customer['wb_cus_id'],
+                                //         'alm_wb_msg_reply_id' => '',
+                                //         'alm_wb_msg_created_on' => $formattedDate,
+                                //         'alm_wb_msg_updated_on' => $formattedDate,
+                                //     ];
+                                //     $wb_message->insert($message_data);
+                                //     $data = [
+                                //         'room_id' => 'crm_' . $msg_customer['wb_cus_mobile'],
+                                //         'message_type' => 4,
+                                //         'message_source' => 1,
+                                //         'message' => $message['interactive']['list_reply']['title'],
+                                //         'time' => date('Y-m-d H:i:s'),
+                                //         'toUserId' => 0,
+                                //         'fromUserId' => $msg_customer
+                                //     ];
+                                //     $reminderDays = (int) str_replace("1Y_", "", $message['interactive']['list_reply']['id']);
+                                //     // Calculate the reminder date
+                                //     $wb_cus_remind_date = date('Y-m-d', strtotime("+$reminderDays days"));
+                                //     $tracker_data = [
+                                //         'wb_cus_remind_date' => $wb_cus_remind_date,
+                                //         'wb_cus_remind_flag' => 1,  // Need To Remind
+                                //         'wb_cus_assigned' => 19
+                                //     ];
+                                //     $wb_customer->where('wb_cus_id', $msg_customer['wb_cus_id'])->set($tracker_data)->update();
+                                //     $this->sendSocketMessage($data);
+                                //     $messageData = array(
+                                //         "messaging_product" => "whatsapp",
+                                //         "recipient_type" => "individual",
+                                //         "to" => $contact['wa_id'],
+                                //         "type" => "text",
+                                //         "text" => array(
+                                //             "body" => "⏳ We will remind you in *" . $message['interactive']['list_reply']['title'] . "(" . $wb_cus_remind_date . ").* Please stay tuned! 📲"
+                                //         )
+                                //     );
+                                //     $returnMsg = $common->sendCustomerWhatsappMessage($messageData, '971509766075');
+                                //     if (isset($returnMsg->messages)) {
+                                //         if ($returnMsg->messages[0]->id != "") {
+
+                                //             $message_data = [
+                                //                 'alm_wb_msg_master_id' => $returnMsg->messages[0]->id,
+                                //                 'alm_wb_msg_source' => 2,
+                                //                 'alm_wb_msg_type' => 4,
+                                //                 'alm_wb_msg_content' => $messageData['text']['body'],
+                                //                 'alm_wb_msg_status' => 1,
+                                //                 'alm_wb_msg_customer' => $msg_customer['wb_cus_id'],
+                                //                 'alm_wb_msg_reply_id' => '',
+                                //                 'alm_wb_msg_created_on' => date("Y-m-d H:i:s.u"),
+                                //                 'alm_wb_msg_updated_on' => date("Y-m-d H:i:s.u"),
+                                //                 'alm_wb_msg_staff_id' => 1,
+                                //             ];
+                                //             $result = $wb_message->insert($message_data);
+                                //             $data = [
+                                //                 'room_id' => 'crm_' . $msg_customer['wb_cus_mobile'],
+                                //                 'message_type' => 4,
+                                //                 'message_source' => 2,
+                                //                 'message' => $messageData['text']['body'],
+                                //                 'time' => date('Y-m-d H:i:s'),
+                                //                 'toUserId' => 1,
+                                //                 'fromUserId' => $msg_customer
+                                //             ];
+                                //             $this->sendSocketMessage($data);
+                                //             $mobile = $msg_customer['wb_cus_mobile'];
+                                //             $currentFollowUp = $wb_customer->where('wb_cus_mobile', $mobile)->select('wb_cus_follow_up')->first();
+                                //             if ($currentFollowUp) {
+                                //                 $followUpCount = $currentFollowUp['wb_cus_follow_up'];
+                                //                 if ($followUpCount < 3 && $followUpCount != 1 && $followUpCount != 0) {
+                                //                     $followUpCount++;
+                                //                 } else if ($followUpCount == 3) {
+                                //                     $followUpCount = 6;
+                                //                 } else if ($followUpCount == 1) {
+                                //                     $followUpCount = 2;
+                                //                 }
+                                //                 $tracker_data = [
+                                //                     'wb_cus_follow_up' => $followUpCount,
+                                //                     'wb_cus_follow_up_time' => date('Y-m-d H-i-s'),
+                                //                 ];
+                                //                 $wb_customer->where('wb_cus_mobile', $mobile)->set($tracker_data)->update();
+                                //             }
+                                //         }
+                                //     }
+                                // } 
+                                // else if (
+                                //     $message['interactive']['list_reply']['id'] == '1YAF_7' || $message['interactive']['list_reply']['id'] == '1YAF_14'
+                                //     || $message['interactive']['list_reply']['id'] == '1YAF_21' || $message['interactive']['list_reply']['id'] == '1YAF_30'
+                                // ) {
+                                //     $message_data = [
+                                //         'alm_wb_msg_master_id' => $message['id'],
+                                //         'alm_wb_msg_source' => 1,
+                                //         'alm_wb_msg_type' => 4,
+                                //         'alm_wb_msg_content' => $message['interactive']['list_reply']['title'],
+                                //         'alm_wb_msg_status' => 2,
+                                //         'alm_wb_msg_customer' => $msg_customer['wb_cus_id'],
+                                //         'alm_wb_msg_reply_id' => '',
+                                //         'alm_wb_msg_created_on' => $formattedDate,
+                                //         'alm_wb_msg_updated_on' => $formattedDate,
+                                //     ];
+                                //     $wb_message->insert($message_data);
+                                //     $data = [
+                                //         'room_id' => 'crm_' . $msg_customer['wb_cus_mobile'],
+                                //         'message_type' => 4,
+                                //         'message_source' => 1,
+                                //         'message' => $message['interactive']['list_reply']['title'],
+                                //         'time' => date('Y-m-d H:i:s'),
+                                //         'toUserId' => 0,
+                                //         'fromUserId' => $msg_customer
+                                //     ];
+                                //     $reminderDays = (int) str_replace("1YAF_", "", $message['interactive']['list_reply']['id']);
+                                //     // Calculate the reminder date
+                                //     $wb_cus_remind_date = date('Y-m-d', strtotime("+$reminderDays days"));
+                                //     $tracker_data = [
+                                //         'wb_cus_remind_date' => $wb_cus_remind_date,
+                                //         'wb_cus_remind_flag' => 1,  // Need To Remind
+                                //         'wb_cus_assigned' => 19
+                                //     ];
+                                //     $wb_customer->where('wb_cus_id', $msg_customer['wb_cus_id'])->set($tracker_data)->update();
+                                //     $this->sendSocketMessage($data);
+                                //     $messageData = array(
+                                //         "messaging_product" => "whatsapp",
+                                //         "recipient_type" => "individual",
+                                //         "to" => $contact['wa_id'],
+                                //         "type" => "text",
+                                //         "text" => array(
+                                //             "body" => "⏳ We will remind you in *" . $message['interactive']['list_reply']['title'] . "(" . $wb_cus_remind_date . ").* Please stay tuned! 📲"
+                                //         )
+                                //     );
+                                //     $returnMsg = $common->sendCustomerWhatsappMessage($messageData, '971509766075');
+                                //     if (isset($returnMsg->messages)) {
+                                //         if ($returnMsg->messages[0]->id != "") {
+
+                                //             $message_data = [
+                                //                 'alm_wb_msg_master_id' => $returnMsg->messages[0]->id,
+                                //                 'alm_wb_msg_source' => 2,
+                                //                 'alm_wb_msg_type' => 4,
+                                //                 'alm_wb_msg_content' => $messageData['text']['body'],
+                                //                 'alm_wb_msg_status' => 1,
+                                //                 'alm_wb_msg_customer' => $msg_customer['wb_cus_id'],
+                                //                 'alm_wb_msg_reply_id' => '',
+                                //                 'alm_wb_msg_created_on' => date("Y-m-d H:i:s.u"),
+                                //                 'alm_wb_msg_updated_on' => date("Y-m-d H:i:s.u"),
+                                //                 'alm_wb_msg_staff_id' => 1,
+                                //             ];
+                                //             $result = $wb_message->insert($message_data);
+                                //             $data = [
+                                //                 'room_id' => 'crm_' . $msg_customer['wb_cus_mobile'],
+                                //                 'message_type' => 4,
+                                //                 'message_source' => 2,
+                                //                 'message' => $messageData['text']['body'],
+                                //                 'time' => date('Y-m-d H:i:s'),
+                                //                 'toUserId' => 1,
+                                //                 'fromUserId' => $msg_customer
+                                //             ];
+                                //             $this->sendSocketMessage($data);
+                                //             $mobile = $msg_customer['wb_cus_mobile'];
+                                //             $currentFollowUp = $wb_customer->where('wb_cus_mobile', $mobile)->select('wb_cus_follow_up')->first();
+                                //             if ($currentFollowUp) {
+                                //                 $followUpCount = $currentFollowUp['wb_cus_follow_up'];
+                                //                 if ($followUpCount < 3 && $followUpCount != 1 && $followUpCount != 0) {
+                                //                     $followUpCount++;
+                                //                 } else if ($followUpCount == 3) {
+                                //                     $followUpCount = 6;
+                                //                 } else if ($followUpCount == 1) {
+                                //                     $followUpCount = 2;
+                                //                 }
+                                //                 $tracker_data = [
+                                //                     'wb_cus_follow_up' => $followUpCount,
+                                //                     'wb_cus_follow_up_time' => date('Y-m-d H-i-s'),
+                                //                 ];
+                                //                 $wb_customer->where('wb_cus_mobile', $mobile)->set($tracker_data)->update();
+                                //             }
+                                //         }
+                                //     }
+                                // }
                             }
                         }
+
                         if (sizeof($lead_list) == 0) {
                             if ($last_lead) {
                                 $builder = $this->db->table('sequence_data');
@@ -1140,15 +1611,10 @@ class WhatsappChatController extends ResourceController
                                 $currentDateTime = new DateTime();
                                 // Calculate the difference in hours
                                 $interval = $leadCreatedDateTime->diff($currentDateTime);
-                                // log_message('error',  "currentDateTime" . json_encode($currentDateTime));
-                                // log_message('error',  "leadCreatedDateTime" . json_encode($leadCreatedDateTime));
                                 $hoursDifference = ($interval->days * 24) + $interval->h;
-                                // log_message('error',  "hoursDifference" . json_encode($hoursDifference));
-                                // log_message('error',  "reOpenHours" . json_encode($reOpenHours));
                             }
 
                             // Get the current date and time
-
                             $leadData = [];
                             $this->db->transStart();
                             $phone = $msg_customer['wb_cus_mobile'];
@@ -1160,13 +1626,11 @@ class WhatsappChatController extends ResourceController
                                 if ($message['referral']['source_type'] == 'ad') {
                                     $campaign_data = $common->getAdCampaignId($message['referral']['source_id']);
                                     $socialMediaCampaign = new SocialMediaCampaignModel();
-                                    if (isset($campaign_data) && isset($campaign_data->campaign_id)) {
-                                        $current_camp = $socialMediaCampaign->where('smc_ad_id', $campaign_data->campaign_id)->where('smc_status', 0)->first();
-                                        if (isset($current_camp)) {
-                                            $source_type = 8;
-                                            $social_source = 3;
-                                            $social_camp_id = $current_camp['smc_id'];
-                                        }
+                                    $current_camp = $socialMediaCampaign->where('smc_ad_id', $campaign_data->campaign_id)->where('smc_status', 0)->first();
+                                    if (isset($current_camp)) {
+                                        $source_type = 8;
+                                        $social_source = 3;
+                                        $social_camp_id = $current_camp['smc_id'];
                                     }
                                 }
                             }
@@ -1305,6 +1769,25 @@ class WhatsappChatController extends ResourceController
                                 $builder->set('current_seq', ++$leadSeqvalfinal);
                                 $builder->update();
                             }
+                            // if (!$messaged && ($isNightTime || $isWeekendNightTime)) {
+                            //     log_message('error', "The current time falls within the specified range. Sending message...");
+
+                            //     $data = [
+                            //         "alm_wb_msg_source" => "2",
+                            //         "alm_wb_msg_staff_id" => "18",
+                            //         "alm_wb_msg_type" => "4",
+                            //         "alm_wb_msg_content" => "We are unavailable at the moment and will get back to you during our working hours, Monday to Saturday, 8:00 AM to 7:00 PM.",
+                            //         "alm_wb_msg_status" => 1,
+                            //         "alm_wb_msg_customer" => $msg_customer['wb_cus_id'],
+                            //         "alm_wb_msg_mobile" => $contact['wa_id'],
+                            //     ];
+
+                            //     $response = $this->sendAwayMessageToCustomer($data);
+                            // } else {
+                            //     log_message('error', "The current time is outside the specified range or message was already sent within the last hour.");
+                            // }
+
+
 
 
                             if ($this->db->transStatus() === false) {
@@ -1314,8 +1797,12 @@ class WhatsappChatController extends ResourceController
                             }
                         }
 
-                        if (!$messaged && $isNonWorkingHours && $message['type'] != "interactive" && $message['type'] != "button" && $message['type'] != "location") {
+
+
+
+                        if (!$messaged && $isNonWorkingHours && $message['type'] != "interactive" && $message['type'] != "button" && $message['type'] != "location" && !$lastApptMessage) {
                             // log_message('error', "The current time falls within ramdan time range. Sending message...");
+
                             $cacheKey = "away_msg_lock_" . $wb_cus_id;
                             // Check if the lock exists
                             if (!cache($cacheKey)) {
@@ -1349,9 +1836,179 @@ class WhatsappChatController extends ResourceController
                 return;
             }
         } catch (LogException $e) {
-            log_message('error', 'Webhook Error: ' . $e->getMessage());
+            // log_message('error', 'Webhook Error: ' . $e->getMessage());
         }
     }
+
+    function generateGroupedWorkshopHoursMessage($workshopDays)
+    {
+        if (empty($workshopDays)) {
+            return "Working hours not available.";
+        }
+
+        $daysOrder = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+        $dayTimings = [];
+
+        foreach ($workshopDays as $day) {
+            $dayName = $day['name'];
+
+            if (!empty($day['open']) && !empty($day['start']) && !empty($day['end'])) {
+                $slots = [];
+
+                // Morning slot (start -> noonStart)
+                if (!empty($day['noonStart'])) {
+                    $start = date("g:i A", strtotime($day['start']));
+                    $noonStart = date("g:i A", strtotime($day['noonStart']));
+                    $slots[] = "{$start} to {$noonStart}";
+                }
+
+                // Afternoon slot (noonEnd -> end)
+                if (!empty($day['noonEnd'])) {
+                    $noonEnd = date("g:i A", strtotime($day['noonEnd']));
+                    $end = date("g:i A", strtotime($day['end']));
+                    $slots[] = "{$noonEnd} to {$end}";
+                } else {
+                    // If no break, just use full slot
+                    $start = date("g:i A", strtotime($day['start']));
+                    $end   = date("g:i A", strtotime($day['end']));
+                    $slots[] = "{$start} to {$end}";
+                }
+
+                $dayTimings[$dayName] = $slots;
+            }
+        }
+
+        // Group days with same timings
+        $groups = [];
+        $currentGroup = [];
+        $prevTiming = null;
+
+        foreach ($daysOrder as $day) {
+            if (!isset($dayTimings[$day])) {
+                if ($currentGroup) {
+                    $groups[] = [$currentGroup, $prevTiming];
+                    $currentGroup = [];
+                    $prevTiming = null;
+                }
+                continue;
+            }
+
+            $timing = $dayTimings[$day];
+
+            if ($prevTiming === null || $timing === $prevTiming) {
+                $currentGroup[] = $day;
+                $prevTiming = $timing;
+            } else {
+                $groups[] = [$currentGroup, $prevTiming];
+                $currentGroup = [$day];
+                $prevTiming = $timing;
+            }
+        }
+        if ($currentGroup) {
+            $groups[] = [$currentGroup, $prevTiming];
+        }
+
+        // Build the message
+        $message = "Working Hours:\n\n";
+        foreach ($groups as [$days, $timings]) {
+            if (count($days) > 1) {
+                $message .= $days[0] . " - " . end($days) . ":\n";
+            } else {
+                $message .= $days[0] . ":\n";
+            }
+
+            foreach ($timings as $t) {
+                $message .= "⏰ *{$t}*\n";
+            }
+            $message .= "\n";
+        }
+        // log_message('error', 'getting message: ' . $message);
+
+
+        return trim($message);
+    }
+
+    // Step 2: Build WhatsApp message from workshopDays
+    // function generateGroupedWorkshopHoursMessage($workshopDays)
+    // {
+    //     // log_message('error', 'getting workshops: ' . $workshopDays);
+
+    //     if (empty($workshopDays)) {
+    //         return "Working hours not available.";
+    //     }
+
+    //     $daysOrder = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+    //     $dayTimings = [];
+
+    //     foreach ($workshopDays as $day) {
+    //         $dayName = $day['name'];
+
+    //         // // Special Friday (ignore DB values, use fixed slots)
+    //         // if (strtolower($dayName) === "friday") {
+    //         //     $dayTimings[$dayName] = [
+    //         //         "8:00 AM to 12:30 PM",
+    //         //         "2:30 PM to 7:00 PM"
+    //         //     ];
+    //         //     continue;
+    //         // }
+
+    //         if (!empty($day['open']) && !empty($day['start']) && !empty($day['end'])) {
+    //             $start = date("g:i A", strtotime($day['start']));
+    //             $end   = date("g:i A", strtotime($day['end']));
+    //             $dayTimings[$dayName] = ["{$start} to {$end}"];
+    //         }
+    //     }
+
+    //     // Group days with same timings
+    //     $groups = [];
+    //     $currentGroup = [];
+    //     $prevTiming = null;
+
+    //     foreach ($daysOrder as $day) {
+    //         if (!isset($dayTimings[$day])) {
+    //             // End the current group if exists
+    //             if ($currentGroup) {
+    //                 $groups[] = [$currentGroup, $prevTiming];
+    //                 $currentGroup = [];
+    //                 $prevTiming = null;
+    //             }
+    //             continue;
+    //         }
+
+    //         $timing = $dayTimings[$day];
+
+    //         if ($prevTiming === null || $timing === $prevTiming) {
+    //             $currentGroup[] = $day;
+    //             $prevTiming = $timing;
+    //         } else {
+    //             $groups[] = [$currentGroup, $prevTiming];
+    //             $currentGroup = [$day];
+    //             $prevTiming = $timing;
+    //         }
+    //     }
+    //     if ($currentGroup) {
+    //         $groups[] = [$currentGroup, $prevTiming];
+    //     }
+
+    //     // Build the message
+    //     $message = "Working Hours:\n\n";
+    //     foreach ($groups as [$days, $timings]) {
+    //         if (count($days) > 1) {
+    //             $message .= $days[0] . " - " . end($days) . ":\n";
+    //         } else {
+    //             $message .= $days[0] . ":\n";
+    //         }
+
+    //         foreach ($timings as $t) {
+    //             $message .= "⏰ *{$t}*\n";
+    //         }
+    //         $message .= "\n";
+    //     }
+    //     log_message('error', 'getting message: ' . $message);
+
+    //     return trim($message);
+    // }
+
 
     public function sendWelcomeMessage($msg_customer)
     {
@@ -1403,8 +2060,9 @@ class WhatsappChatController extends ResourceController
     public function sendSocketMessage($data)
     {
         $ch = curl_init();
-
-        curl_setopt($ch, CURLOPT_URL, "https://chatramsserver-production.up.railway.app/api/send_message"); // http://localhost:3000/api/send_message
+        // curl_setopt($ch, CURLOPT_URL, "https://chatserver-production-b7e1.up.railway.app");  //test server
+        curl_setopt($ch, CURLOPT_URL, "https://chatramsserver-production.up.railway.app/api/send_message");  // Dubai
+        // curl_setopt($ch, CURLOPT_URL, "https://chatramsserver-production-e8fc.up.railway.app/api/send_message");  // Live AUH Server
         curl_setopt($ch, CURLOPT_HTTPHEADER, array(
             'Content-Type: application/x-www-form-urlencoded' // Change to form-urlencoded
         ));
@@ -1419,7 +2077,7 @@ class WhatsappChatController extends ResourceController
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, FALSE);
 
         $response = curl_exec($ch);
-        log_message('error', 'Webhook Error: ' . json_encode($response));
+        // log_message('error', 'Webhook Error: ' . json_encode($response));
     }
 
     public function getWhatsappCustomers()
@@ -1427,6 +2085,7 @@ class WhatsappChatController extends ResourceController
 
         $common = new Common();
         $valid = new Validation();
+        $cet = new CommonSettings();
 
         $heddata = $this->request->headers();
         $tokendata = $common->decode_jwt_token($valid->getbearertoken($heddata['Authorization']));
@@ -1451,6 +2110,7 @@ class WhatsappChatController extends ResourceController
             $limit = (int) $limit;
             $offset = (int) $offset;
             $customer_list = $wb_customer->getCustomerWithLastMessageAndUnreadCount($offset, $limit);
+            // $cet->getGoogleAccessToken($tokendata['uid']);
             if ($customer_list) {
                 //  $this->insertUserLog('View Lead List',$tokendata['uid']);
                 $response = [
@@ -1507,6 +2167,7 @@ class WhatsappChatController extends ResourceController
                     'wb_customer_messages' => $wb_messages,
                     'wb_lead_details' => $lead_details
                 ];
+                // $common->send_notification("to", "title", "message");
                 return $this->respond($response, 200);
             } else {
                 $response = [
@@ -1551,80 +2212,87 @@ class WhatsappChatController extends ResourceController
             } else {
                 $timeDifference = 86400;
             }
-
-            if ($timeDifference > 86300) {
-                $messageData = array(
-                    "messaging_product" => "whatsapp",
-                    "to" => $this->request->getVar("alm_wb_msg_mobile"),
-                    "type" => "template",
-                    "template" => array(
-                        "name" => "session_expiry_message", // Replace with your template name
-                        "language" => array(
-                            "code" => "en" // Replace with the language code of your template
-                        ),
-                        "components" => array(
-                            array(
-                                "type" => "body",
-                                "parameters" => array(
-                                    array(
-                                        "type" => "text",
-                                        "text" => $this->request->getVar("alm_wb_msg_content") // Replace or add as per your template's placeholders
-                                    ),
+            $mobile = $this->request->getVar("alm_wb_msg_mobile");
+            $isBlocked = $wb_customer->where('wb_cus_mobile', $mobile)->where('wb_cus_block', 0)->first();
+            if ($isBlocked) {
+                if ($timeDifference > 86300) {
+                    $messageData = array(
+                        "messaging_product" => "whatsapp",
+                        "to" => $this->request->getVar("alm_wb_msg_mobile"),
+                        "type" => "template",
+                        "template" => array(
+                            "name" => "session_expiry_message", // Replace with your template name
+                            "language" => array(
+                                "code" => "en" // Replace with the language code of your template
+                            ),
+                            "components" => array(
+                                array(
+                                    "type" => "body",
+                                    "parameters" => array(
+                                        array(
+                                            "type" => "text",
+                                            "text" => $this->request->getVar("alm_wb_msg_content") // Replace or add as per your template's placeholders
+                                        ),
+                                    )
                                 )
                             )
                         )
-                    )
-                );
-            } else {
-                $messageData = array(
-                    "messaging_product" => "whatsapp",
-                    "to" => $this->request->getVar("alm_wb_msg_mobile"),
-                    "type" => "text",
-                    'text' => [
-                        'body' => $this->request->getVar('alm_wb_msg_content')
-                    ]
-                );
-            }
-            $returnMsg = $common->sendCustomerWhatsappMessage($messageData, '971509766075');
-            if (isset($returnMsg->messages)) {
-                if ($returnMsg->messages[0]->id != "") {
-                    log_message('error', 'Webhook Error: ' . $returnMsg->messages[0]->id);
-                    $message_data = [
-                        'alm_wb_msg_master_id' => $returnMsg->messages[0]->id,
-                        'alm_wb_msg_source' => 2,
-                        'alm_wb_msg_type' => $this->request->getVar('alm_wb_msg_type'),
-                        'alm_wb_msg_content' => $this->request->getVar('alm_wb_msg_content'),
-                        'alm_wb_msg_status' => $this->request->getVar('alm_wb_msg_status'),
-                        'alm_wb_msg_customer' => $this->request->getVar('alm_wb_msg_customer'),
-                        'alm_wb_msg_reply_id' => '',
-                        'alm_wb_msg_created_on' => date("Y-m-d H:i:s.u"),
-                        'alm_wb_msg_updated_on' => date("Y-m-d H:i:s.u"),
-                        'alm_wb_msg_staff_id' => $tokendata['uid']
-                    ];
-                    $result = $wb_message->insert($message_data);
-                    $mobile = $this->request->getVar("alm_wb_msg_mobile");
-                    $currentFollowUp = $wb_customer->where('wb_cus_mobile', $mobile)->select('wb_cus_follow_up')->first();
-                    if ($currentFollowUp) {
-                        $followUpCount = $currentFollowUp['wb_cus_follow_up'];
-                        if ($followUpCount < 3 && $followUpCount != 1 && $followUpCount != 0) {
-                            $followUpCount++;
-                        } else if ($followUpCount == 3) {
-                            $followUpCount = 6;
-                        } else if ($followUpCount == 1) {
-                            $followUpCount = 2;
+                    );
+                } else {
+                    $messageData = array(
+                        "messaging_product" => "whatsapp",
+                        "to" => $this->request->getVar("alm_wb_msg_mobile"),
+                        "type" => "text",
+                        'text' => [
+                            'body' => $this->request->getVar('alm_wb_msg_content')
+                        ]
+                    );
+                }
+                $returnMsg = $common->sendCustomerWhatsappMessage($messageData, '971509766075');
+                if (isset($returnMsg->messages)) {
+                    if ($returnMsg->messages[0]->id != "") {
+                        $message_data = [
+                            'alm_wb_msg_master_id' => $returnMsg->messages[0]->id,
+                            'alm_wb_msg_source' => 2,
+                            'alm_wb_msg_type' => $this->request->getVar('alm_wb_msg_type'),
+                            'alm_wb_msg_content' => $this->request->getVar('alm_wb_msg_content'),
+                            'alm_wb_msg_status' => $this->request->getVar('alm_wb_msg_status'),
+                            'alm_wb_msg_customer' => $this->request->getVar('alm_wb_msg_customer'),
+                            'alm_wb_msg_reply_id' => '',
+                            'alm_wb_msg_created_on' => date("Y-m-d H:i:s.u"),
+                            'alm_wb_msg_updated_on' => date("Y-m-d H:i:s.u"),
+                            'alm_wb_msg_staff_id' => $tokendata['uid']
+                        ];
+                        $result = $wb_message->insert($message_data);
+                        $mobile = $this->request->getVar("alm_wb_msg_mobile");
+                        $currentFollowUp = $wb_customer->where('wb_cus_mobile', $mobile)->select('wb_cus_follow_up')->first();
+                        if ($currentFollowUp) {
+                            $followUpCount = $currentFollowUp['wb_cus_follow_up'];
+                            if ($followUpCount < 3 && $followUpCount != 1 && $followUpCount != 0) {
+                                $followUpCount++;
+                            } else if ($followUpCount == 3) {
+                                $followUpCount = 6;
+                            } else if ($followUpCount == 1) {
+                                $followUpCount = 2;
+                            }
+                            $tracker_data = [
+                                'wb_cus_follow_up' => $followUpCount,
+                                'wb_cus_follow_up_time' => date('Y-m-d H-i-s'),
+                            ];
+                            $wb_customer->where('wb_cus_mobile', $mobile)->set($tracker_data)->update();
                         }
-                        $tracker_data = [
-                            'wb_cus_follow_up' => $followUpCount,
-                            'wb_cus_follow_up_time' => date('Y-m-d H-i-s'),
-                        ];
-                        $wb_customer->where('wb_cus_mobile', $mobile)->set($tracker_data)->update();
-                    }
-                    if ($result) {
-                        //  $this->insertUserLog('View Lead List',$tokendata['uid']);
-                        $response = [
-                            'ret_data' => 'success',
-                        ];
-                        return $this->respond($response, 200);
+                        if ($result) {
+                            //  $this->insertUserLog('View Lead List',$tokendata['uid']);
+                            $response = [
+                                'ret_data' => 'success',
+                            ];
+                            return $this->respond($response, 200);
+                        } else {
+                            $response = [
+                                'ret_data' => 'fail',
+                            ];
+                            return $this->respond($response, 200);
+                        }
                     } else {
                         $response = [
                             'ret_data' => 'fail',
@@ -1633,14 +2301,15 @@ class WhatsappChatController extends ResourceController
                     }
                 } else {
                     $response = [
-                        'ret_data' => 'fail',
+                        'ret_data' => $returnMsg,
+                        'data' => $last_message
                     ];
                     return $this->respond($response, 200);
                 }
             } else {
                 $response = [
-                    'ret_data' => $returnMsg,
-                    'data' => $last_message
+                    'ret_data' => 'fail',
+                    'blocked'  => 'true',
                 ];
                 return $this->respond($response, 200);
             }
@@ -1744,7 +2413,6 @@ class WhatsappChatController extends ResourceController
                 $returnMsg = $common->sendCustomerWhatsappMessage($messageData, '971509766075');
                 if (isset($returnMsg->messages)) {
                     if ($returnMsg->messages[0]->id != "") {
-                        log_message('error', 'Webhook Error: ' . $returnMsg->messages[0]->id);
                         $message_data = [
                             'alm_wb_msg_master_id' => $returnMsg->messages[0]->id,
                             'alm_wb_msg_source' => 2,
@@ -1898,7 +2566,6 @@ class WhatsappChatController extends ResourceController
                 $returnMsg = $common->sendCustomerWhatsappMessage($messageData, '971509766075');
                 if (isset($returnMsg->messages)) {
                     if ($returnMsg->messages[0]->id != "") {
-                        log_message('error', 'Webhook Error: ' . $returnMsg->messages[0]->id);
                         $message_data = [
                             'alm_wb_msg_master_id' => $returnMsg->messages[0]->id,
                             'alm_wb_msg_source' => 2,
@@ -2011,12 +2678,11 @@ class WhatsappChatController extends ResourceController
                     } else {
                         $customer_id = $msg_customer['wb_cus_id'];
                     }
-                    log_message('error', 'Webhook Error: ' . $returnMsg->messages[0]->id);
                     $message_data = [
                         'alm_wb_msg_master_id' => $returnMsg->messages[0]->id,
                         'alm_wb_msg_source' => 2,
                         'alm_wb_msg_type' => 4,
-                        'alm_wb_msg_content' => "Hi sir Welcome To Al Maraghi Automotive We're excited to have you with us, " . $this->request->getVar("message"),
+                        'alm_wb_msg_content' => "Hi sir Welcome To Al Maraghi Automotive We're excited to have you with us," . $this->request->getVar("message"),
                         'alm_wb_msg_status' => 1,
                         'alm_wb_msg_customer' => $customer_id,
                         'alm_wb_msg_reply_id' => '',
@@ -2174,11 +2840,11 @@ class WhatsappChatController extends ResourceController
                             "parameters" => array(
                                 array(
                                     "type" => "text",
-                                    "text" => $formattedDate // Replace or add as per your template's placeholders
+                                    "text" => $formattedDate
                                 ),
                                 array(
                                     "type" => "text",
-                                    "text" => $this->request->getVar("timeFrom") . ' TO ' . $this->request->getVar("timeTo") // Replace or add as per your template's placeholders
+                                    "text" => $this->request->getVar("timeFrom")
                                 ),
                             )
                         )
@@ -2199,7 +2865,7 @@ class WhatsappChatController extends ResourceController
                         We wanted to confirm your upcoming appointment for your Mercedes-Benz service.
                         Here are the details: 
                         DATE: ' . $formattedDate . '
-                        TIME: ' . $this->request->getVar("timeFrom") . ' TO ' . $this->request->getVar("timeTo") . '
+                        TIME: ' . $this->request->getVar("timeFrom") . '
                         location : https://maps.app.goo.gl/v6CubY8wkWadQzYg9',
                         'alm_wb_msg_customer' => $this->request->getVar("cust_id"),
                         'alm_wb_msg_reply_id' => '',
@@ -2328,7 +2994,7 @@ class WhatsappChatController extends ResourceController
                 $returnMsg = $common->sendCustomerWhatsappMessage($messageData, '971509766075');
                 if (isset($returnMsg->messages)) {
                     if ($returnMsg->messages[0]->id != "") {
-                        log_message('error', 'Webhook Error: ' . $returnMsg->messages[0]->id);
+                        // log_message('error', 'Webhook Error: ' . $returnMsg->messages[0]->id);
                         $message_data = [
                             'alm_wb_msg_master_id' => $returnMsg->messages[0]->id,
                             'alm_wb_msg_source' => 2,
@@ -2459,7 +3125,7 @@ class WhatsappChatController extends ResourceController
             $returnMsg = $common->sendCustomerWhatsappMessage($messageData, '971509766075');
             if (isset($returnMsg->messages)) {
                 if ($returnMsg->messages[0]->id != "") {
-                    log_message('error', 'Webhook Error: ' . $returnMsg->messages[0]->id);
+                    // log_message('error', 'Webhook Error: ' . $returnMsg->messages[0]->id);
                     $message_data = [
                         'alm_wb_msg_master_id' => $returnMsg->messages[0]->id,
                         'alm_wb_msg_source' => 2,
@@ -2827,7 +3493,7 @@ class WhatsappChatController extends ResourceController
             $wb_customer_messages = new WhatsappCustomerMasterModel();
 
             $customerCounts = $wb_customer->select('wb_cus_category, COUNT(*) as count')
-                ->whereIn('wb_cus_category', [1, 2, 3, 4, 5])
+                ->whereIn('wb_cus_category', [0, 1, 2, 3, 4, 5])
                 ->groupBy('wb_cus_category')
                 ->where('wb_cus_block', 0)
                 ->findAll();
@@ -2838,10 +3504,14 @@ class WhatsappChatController extends ResourceController
                 'appointment' => 0,
                 'quotation' => 0,
                 'irrelevant' => 0,
+                'purpose_not_cust' => 0,
             ];
 
             foreach ($customerCounts as $row) {
                 switch ($row['wb_cus_category']) {
+                    case 0:
+                        $resultCounts['purpose_not_cust'] = (int)$row['count'];
+                        break;
                     case 1:
                         $resultCounts['potential_Customer'] = (int)$row['count'];
                         break;
@@ -2919,7 +3589,7 @@ class WhatsappChatController extends ResourceController
                 $returnMsg = $common->sendCustomerWhatsappMessage($messageData, '971509766075');
                 if (isset($returnMsg->messages)) {
                     if ($returnMsg->messages[0]->id != "") {
-                        log_message('error', 'Webhook Error: ' . $returnMsg->messages[0]->id);
+                        // log_message('error', 'Webhook Error: ' . $returnMsg->messages[0]->id);
                         $message_data = [
                             'alm_wb_msg_master_id' => $returnMsg->messages[0]->id,
                             'alm_wb_msg_source' => 2,
@@ -3059,7 +3729,7 @@ class WhatsappChatController extends ResourceController
                 $returnMsg = $common->sendCustomerWhatsappMessage($messageData, '971509766075');
                 if (isset($returnMsg->messages)) {
                     if ($returnMsg->messages[0]->id != "") {
-                        log_message('error', 'Webhook Error: ' . $returnMsg->messages[0]->id);
+                        // log_message('error', 'Webhook Error: ' . $returnMsg->messages[0]->id);
                         $message_data = [
                             'alm_wb_msg_master_id' => $returnMsg->messages[0]->id,
                             'alm_wb_msg_source' => 2,
@@ -3197,7 +3867,7 @@ class WhatsappChatController extends ResourceController
                 $returnMsg = $common->sendCustomerWhatsappMessage($messageData, '971509766075');
                 if (isset($returnMsg->messages)) {
                     if ($returnMsg->messages[0]->id != "") {
-                        log_message('error', 'Webhook Error: ' . $returnMsg->messages[0]->id);
+                        // log_message('error', 'Webhook Error: ' . $returnMsg->messages[0]->id);
                         $message_data = [
                             'alm_wb_msg_master_id' => $returnMsg->messages[0]->id,
                             'alm_wb_msg_source' => 2,
@@ -3546,6 +4216,7 @@ class WhatsappChatController extends ResourceController
             return $this->respond($response, 200);
         }
     }
+
     public function sendNewCustomerCampaignMessage()
     {
         $common = new Common();
@@ -3670,6 +4341,7 @@ T&C Apply",
             }
         }
     }
+
     public function sendNewEngagementMessage()
     {
         $common = new Common();
@@ -3733,7 +4405,6 @@ T&C Apply",
                     } else {
                         $customer_id = $msg_customer['wb_cus_id'];
                     }
-                    log_message('error', 'Webhook Error: ' . $returnMsg->messages[0]->id);
                     $message_data = [
                         'alm_wb_msg_master_id' => $returnMsg->messages[0]->id,
                         'alm_wb_msg_source' => 2,
@@ -3897,7 +4568,7 @@ Sunday: Off day",
 
                         Working Hours: 
                         Mon - Thu and Sat : 8:30am - 7pm
-                        Friday: 8:30 am -12 pm, 2:15pm-7:00pm
+                        Friday: 8:30 am -12:30 pm,2:30 pm -7:00 pm
                         Sunday : Off day ',
 
                         'alm_wb_msg_customer' => $this->request->getVar("cust_id"),
@@ -4090,7 +4761,7 @@ Sunday: Off day",
 
                       Thank you for contacting Al-Maraghi Automotives! Do you have any questions about our Mercedes-Benz services? 🚘🔧
 
-                      Feel free to reply here or call us at +971 50 588 2207📞
+                      Feel free to reply here or call us at +971505882207📞
 
                       Best regards
                       Al-Maraghi Automotives Dubai 🌐',
@@ -4464,7 +5135,7 @@ Limited-time offer – ensure your car’s in expert hands today!',
                     } else {
                         $customer_id = $msg_customer['wb_cus_id'];
                     }
-                    log_message('error', 'Webhook Error: ' . $returnMsg->messages[0]->id);
+                    // log_message('error', 'Webhook Error: ' . $returnMsg->messages[0]->id);
                     $message_data = [
                         'alm_wb_msg_master_id' => $returnMsg->messages[0]->id,
                         'alm_wb_msg_source' => 2,
@@ -4695,7 +5366,7 @@ Address: Al Quoz - Al Quoz Industrial Area 2 - Dubai - United Arab Emirates.
 
 Working Hours: 
 Mon - Thu and Sat : 8:30am - 7pm
-Friday: 8:30 am -12 pm, 2:15pm-7:00pm
+Friday: 8:30 am -12:30 pm,2:30 pm -7:00 pm
 Sunday : Off day",
                         'alm_wb_msg_status' => 1,
                         'alm_wb_msg_customer' => 849,
@@ -4857,7 +5528,7 @@ Al Maraghi Independent Mercedes Benz Service Centre Dubai",
             $wb_message = new WhatsappCustomerMessageModel();
             $wb_customer = new WhatsappCustomerMasterModel();
 
-            $searchText = $this->request->getVar("serachText");
+            $searchText = $this->request->getVar("searchText");
 
             // Step 1: Fetch all customers using LIKE
             $customers = $wb_customer
@@ -4865,6 +5536,7 @@ Al Maraghi Independent Mercedes Benz Service Centre Dubai",
                 ->like('wb_cus_name', $searchText)
                 ->orLike('wb_cus_mobile', $searchText)
                 ->groupEnd()
+                ->where('wb_cus_block', 0)
                 ->limit(10)
                 ->get()
                 ->getResultArray();
@@ -4875,6 +5547,12 @@ Al Maraghi Independent Mercedes Benz Service Centre Dubai",
                     ->where('alm_wb_msg_customer', $customer['wb_cus_id'])
                     ->orderBy('alm_wb_msg_created_on', 'DESC')
                     ->first();
+
+                $customer['message_status_2_count'] = $wb_message
+                    ->where('alm_wb_msg_source', 1)
+                    ->where('alm_wb_msg_status', 2)
+                    ->where('alm_wb_msg_customer', $customer['wb_cus_id'])
+                    ->countAllResults();
 
                 if ($latestMessage) {
                     // Merge latest message fields directly into the customer array
@@ -4935,67 +5613,146 @@ Al Maraghi Independent Mercedes Benz Service Centre Dubai",
             $wb_customer = new WhatsappCustomerMasterModel();
             $WhatsappFollowUpTimeModel = new WhatsappFollowUpTimeModel();
 
-            $followUpResults = $WhatsappFollowUpTimeModel->where("wb_msg_fut_delete_flag", 0)->findAll();
+            // $followUpResults = $WhatsappFollowUpTimeModel->where("wb_msg_fut_delete_flag", 0)->findAll();
 
-            $followupCustomerMessages = [];
-            $db = \Config\Database::connect();
+            // $followupCustomerMessages = [];
+            // $db = \Config\Database::connect();
 
-            foreach ($followUpResults as $followUp) {
-                $wb_msg_fut_seq = $followUp['wb_msg_fut_seq'];
+            // foreach ($followUpResults as $followUp) {
+            //     $wb_msg_fut_seq = $followUp['wb_msg_fut_seq'];
 
 
 
-                // Raw SQL Query
-                $sql = "
-                         SELECT c.*, l.status_id, l.phone
-                         FROM alm_whatsapp_customers c
-                         INNER JOIN (
-                         SELECT phone, MAX(lead_creted_date) AS latest_lead_date
-                         FROM leads
-                         GROUP BY RIGHT(phone, 9)
-                         ) latest_leads
-                         ON RIGHT(c.wb_cus_mobile, 9) = RIGHT(latest_leads.phone, 9)
-                         INNER JOIN leads l
-                         ON RIGHT(l.phone, 9) = RIGHT(latest_leads.phone, 9) AND l.lead_creted_date = latest_leads.latest_lead_date
-                         WHERE l.status_id IN (8, 1)
-                         AND c.wb_cus_follow_up = ?
-                         AND c.wb_cus_block = 0
-                         AND c.wb_cus_delete_flag = 0
-                          GROUP BY c.wb_cus_id
-                        ";
+            //     // Raw SQL Query
+            //     $sql = "
+            //              SELECT c.*, l.status_id, l.phone
+            //              FROM alm_whatsapp_customers c
+            //              INNER JOIN (
+            //              SELECT phone, MAX(lead_creted_date) AS latest_lead_date
+            //              FROM leads
+            //              GROUP BY RIGHT(phone, 9)
+            //              ) latest_leads
+            //              ON RIGHT(c.wb_cus_mobile, 9) = RIGHT(latest_leads.phone, 9)
+            //              INNER JOIN leads l
+            //              ON RIGHT(l.phone, 9) = RIGHT(latest_leads.phone, 9) AND l.lead_creted_date = latest_leads.latest_lead_date
+            //              WHERE l.status_id IN (8, 1)
+            //              AND c.wb_cus_follow_up = ?
+            //              AND c.wb_cus_block = 0
+            //              AND c.wb_cus_delete_flag = 0
+            //               GROUP BY c.wb_cus_id
+            //             ";
 
-                // Bind variables (if any)
-                $query = $db->query($sql, [$wb_msg_fut_seq]);
+            //     // Bind variables (if any)
+            //     $query = $db->query($sql, [$wb_msg_fut_seq]);
 
-                // Fetch results
-                $customers = $query->getResultArray();
+            //     // Fetch results
+            //     $customers = $query->getResultArray();
 
-                // $customers = $wb_customer->select('alm_whatsapp_customers.*, leads.status_id, leads.phone')
-                //     ->join('leads', 'RIGHT(wb_cus_mobile, -9) = RIGHT(leads.phone, -9)')
-                //     ->where("leads.status_id", 8)
-                //     ->where("wb_cus_follow_up", $wb_msg_fut_seq)
-                //     ->where("wb_cus_block", 0)
-                //     ->where("wb_cus_delete_flag", 0)
-                //     ->findAll();
+            //     // $customers = $wb_customer->select('alm_whatsapp_customers.*, leads.status_id, leads.phone')
+            //     //     ->join('leads', 'RIGHT(wb_cus_mobile, -9) = RIGHT(leads.phone, -9)')
+            //     //     ->where("leads.status_id", 8)
+            //     //     ->where("wb_cus_follow_up", $wb_msg_fut_seq)
+            //     //     ->where("wb_cus_block", 0)
+            //     //     ->where("wb_cus_delete_flag", 0)
+            //     //     ->findAll();
 
-                if (!isset($followupCustomerMessages[$wb_msg_fut_seq])) {
-                    $followupCustomerMessages[$wb_msg_fut_seq] = [];
-                }
-                foreach ($customers as $customer) {
-                    $latestMessage = $wb_message
-                        ->where('alm_wb_msg_customer', $customer['wb_cus_id'])
-                        ->orderBy('alm_wb_msg_created_on', 'desc')
-                        ->limit(1)
-                        ->get()
-                        ->getRowArray();
-                    if ($latestMessage) {
-                        $temp = array_merge($customer, $latestMessage);
-                        $followupCustomerMessages[$wb_msg_fut_seq][] = $temp;
-                    }
-                }
+            //     if (!isset($followupCustomerMessages[$wb_msg_fut_seq])) {
+            //         $followupCustomerMessages[$wb_msg_fut_seq] = [];
+            //     }
+            //     foreach ($customers as $customer) {
+            //         $latestMessage = $wb_message
+            //             ->where('alm_wb_msg_customer', $customer['wb_cus_id'])
+            //             ->orderBy('alm_wb_msg_created_on', 'desc')
+            //             ->limit(1)
+            //             ->get()
+            //             ->getRowArray();
+            //         if ($latestMessage) {
+            //             $temp = array_merge($customer, $latestMessage);
+            //             $followupCustomerMessages[$wb_msg_fut_seq][] = $temp;
+            //         }
+            //     }
+            // }
+
+            $followUpModel = new WhatsappFollowUpTimeModel();
+
+            // Get all follow-up records that are not marked as deleted.
+            $followUpResults = $followUpModel->where('wb_msg_fut_delete_flag', 0)->findAll();
+
+            if (empty($followUpResults)) {
+                return;
             }
 
-            log_message('error', print_r($followupCustomerMessages, true));
+            // Extract follow-up sequences from the results.
+            $followUpSeqs = array_column($followUpResults, 'wb_msg_fut_seq');
+
+            // Get a database connection.
+            $db = \Config\Database::connect();
+
+            // Query to fetch all customers in one go for all follow-up sequences.
+            $sql_customers = "
+            SELECT c.*, l.status_id, l.phone
+            FROM alm_whatsapp_customers c
+            INNER JOIN (
+                SELECT phone, MAX(lead_creted_date) AS latest_lead_date
+                FROM leads
+                GROUP BY RIGHT(phone, 9)
+            ) latest_leads
+              ON RIGHT(c.wb_cus_mobile, 9) = RIGHT(latest_leads.phone, 9)
+            INNER JOIN leads l
+              ON RIGHT(l.phone, 9) = RIGHT(latest_leads.phone, 9)
+             AND l.lead_creted_date = latest_leads.latest_lead_date
+            WHERE l.status_id IN (8, 1)
+              AND c.wb_cus_follow_up IN (" . implode(',', array_map('intval', $followUpSeqs)) . ")
+              AND c.wb_cus_block = 0
+              AND c.wb_cus_delete_flag = 0
+            GROUP BY c.wb_cus_id
+        ";
+
+            $query = $db->query($sql_customers);
+            $customers = $query->getResultArray();
+
+            // Get all customer IDs from the fetched customers.
+            $customerIds = array_column($customers, 'wb_cus_id');
+
+            // Retrieve the latest messages for these customers in one bulk query.
+            if (!empty($customerIds)) {
+                $inIds = implode(',', array_map('intval', $customerIds));
+                $sql_latest_msgs = "
+                SELECT m.*
+                FROM alm_whatsapp_cus_messages m
+                INNER JOIN (
+                    SELECT alm_wb_msg_customer, MAX(alm_wb_msg_created_on) AS latest_created
+                    FROM alm_whatsapp_cus_messages
+                    WHERE alm_wb_msg_customer IN ($inIds)
+                    GROUP BY alm_wb_msg_customer
+                ) lm
+                  ON m.alm_wb_msg_customer = lm.alm_wb_msg_customer
+                 AND m.alm_wb_msg_created_on = lm.latest_created
+            ";
+                $query = $db->query($sql_latest_msgs);
+                $latestMessages = $query->getResultArray();
+            } else {
+                $latestMessages = [];
+            }
+
+            // Build an associative array of messages keyed by customer id.
+            $messagesByCustomer = [];
+            foreach ($latestMessages as $msg) {
+                $messagesByCustomer[$msg['alm_wb_msg_customer']] = $msg;
+            }
+
+            // Merge customer data with its corresponding latest message and group by follow-up sequence.
+            $followupCustomerMessages = [];
+            foreach ($customers as $customer) {
+                $followUpSeq = $customer['wb_cus_follow_up'];
+                if (!isset($followupCustomerMessages[$followUpSeq])) {
+                    $followupCustomerMessages[$followUpSeq] = [];
+                }
+                if (isset($messagesByCustomer[$customer['wb_cus_id']])) {
+                    // Merge the customer data with its latest message.
+                    $followupCustomerMessages[$followUpSeq][] = array_merge($customer, $messagesByCustomer[$customer['wb_cus_id']]);
+                }
+            }
 
             if ($followupCustomerMessages) {
                 $response = [
@@ -5018,6 +5775,405 @@ Al Maraghi Independent Mercedes Benz Service Centre Dubai",
         }
     }
 
+
+    public function sendAwayMessageToCustomer($data)
+    {
+        $common = new Common();
+        $wb_message = new WhatsappCustomerMessageModel();
+        $wb_customer = new WhatsappCustomerMasterModel();
+
+        // log_message('error',  "sendAwayMessageToCustomer 1111");
+
+
+        // Use $data['alm_wb_msg_mobile'] instead of $this->request->getVar("alm_wb_msg_mobile")
+        $messageData = array(
+            "messaging_product" => "whatsapp",
+            "to" => $data['alm_wb_msg_mobile'],
+            "type" => "text",
+            'text' => [
+                'body' => $data['alm_wb_msg_content']
+            ]
+        );
+        $returnMsg = $common->sendCustomerWhatsappMessage($messageData, '971509766075');
+        if (isset($returnMsg->messages)) {
+            if ($returnMsg->messages[0]->id != "") {
+                $message_data = [
+                    'alm_wb_msg_master_id' => $returnMsg->messages[0]->id,
+                    'alm_wb_msg_source' => 2,
+                    'alm_wb_msg_type' => $data['alm_wb_msg_type'],
+                    'alm_wb_msg_content' => $data['alm_wb_msg_content'],
+                    'alm_wb_msg_status' => $data['alm_wb_msg_status'],
+                    'alm_wb_msg_customer' => $data['alm_wb_msg_customer'],
+                    'alm_wb_msg_reply_id' => '',
+                    'alm_wb_msg_created_on' => date("Y-m-d H:i:s.u"),
+                    'alm_wb_msg_updated_on' => date("Y-m-d H:i:s.u"),
+                    'alm_wb_msg_staff_id' => 1,
+                ];
+                $result = $wb_message->insert($message_data);
+                $mobile = $data['alm_wb_msg_mobile'];
+                $currentFollowUp = $wb_customer->where('wb_cus_mobile', $mobile)->select('wb_cus_follow_up')->first();
+                if ($currentFollowUp) {
+                    $followUpCount = $currentFollowUp['wb_cus_follow_up'];
+                    if ($followUpCount < 3 && $followUpCount != 1 && $followUpCount != 0) {
+                        $followUpCount++;
+                    } else if ($followUpCount == 3) {
+                        $followUpCount = 6;
+                    } else if ($followUpCount == 1) {
+                        $followUpCount = 2;
+                    }
+                    $tracker_data = [
+                        'wb_cus_follow_up' => $followUpCount,
+                        'wb_cus_follow_up_time' => date('Y-m-d H-i-s'),
+                    ];
+                    $wb_customer->where('wb_cus_mobile', $mobile)->set($tracker_data)->update();
+                }
+                if ($result) {
+                    $response = [
+                        'ret_data' => 'success',
+                    ];
+                    return $this->respond($response, 200);
+                } else {
+                    $response = [
+                        'ret_data' => 'fail',
+                    ];
+                    return $this->respond($response, 200);
+                }
+            } else {
+                $response = [
+                    'ret_data' => 'fail',
+                ];
+                return $this->respond($response, 200);
+            }
+        } else {
+            $response = [
+                'ret_data' => $returnMsg,
+            ];
+            return $this->respond($response, 200);
+        }
+    }
+
+    public function sendBroadcastWhatsappCampaignMessage()
+
+    {
+
+        $common = new Common();
+        $valid = new Validation();
+        $heddata = $this->request->headers();
+        $tokendata = $common->decode_jwt_token($valid->getbearertoken($heddata['Authorization']));
+
+        if ($tokendata['aud'] == 'superadmin') {
+            $SuperModel = new SuperAdminModel();
+            $super = $SuperModel->where("s_adm_id", $tokendata['uid'])->first();
+            if (!$super) return $this->fail("invalid user", 400);
+        } else if ($tokendata['aud'] == 'user') {
+            $usmodel = new UserModel();
+            $user = $usmodel->where("us_id", $tokendata['uid'])->first();
+            if (!$user) return $this->fail("invalid user", 400);
+        } else {
+            $data['ret_data'] = "Invalid user";
+            return $this->fail($data, 400);
+        }
+
+        if ($tokendata) {
+
+            $wb_message = new WhatsappCustomerMessageModel();
+            $wb_camp = new WhatsappCampaignModel();
+            $wb_camp_message = new WhatsappCampaignMessageModel();
+
+            $customers = $this->request->getVar("alm_wb_msg_mobile");
+            $totalCustomers = is_array($customers) ? count($customers) : 0;
+            $campaignName = strtolower($this->request->getVar("campaignName"));
+
+            foreach ($customers as $cust) {
+                $lead_code = null;
+                $customer_name = $this->request->getVar("customer_name") ? $this->request->getVar("customer_name") : '';
+
+                if (!empty($cust->lead_id) && $this->request->getVar('alm_wb_msg_camp_type') == '1') {
+
+                    // Fetch lead_code from the leads table
+                    $builder = $this->db->table('leads');
+                    $builder->select('lead_code');
+                    $builder->where('lead_id', $cust->lead_id);
+                    $query = $builder->get();
+
+                    if ($row = $query->getRow()) {
+                        $lead_code = $row->lead_code;
+                    }
+                } elseif ($this->request->getVar('alm_wb_msg_camp_type') == '2' && !empty($cust->mobile)) {
+
+                    $builder = $this->db->table('cust_data_laabs');
+                    $builder->select('customer_name');
+                    $builder->where("RIGHT(phone, 9)", substr($cust->mobile, -9));
+                    $query = $builder->get();
+
+                    if ($row = $query->getRow()) {
+                        $customer_name = $row->customer_name;
+                    }
+                } elseif ($this->request->getVar('alm_wb_msg_camp_type') == '6' && !empty($cust->mobile)) {
+
+                    $builder = $this->db->table('cust_data_laabs');
+                    $builder->select('customer_name');
+                    $builder->where("RIGHT(phone, 9)", substr($cust->mobile, -9));
+                    $query = $builder->get();
+
+                    if ($row = $query->getRow()) {
+                        $customer_name = $row->customer_name;
+                    }
+                }
+
+                $phone = $cust->mobile;
+                $last9Digits = substr($phone, -9);
+                $whatsappNumber = '971' . $last9Digits;
+
+                $messageData = array(
+                    "messaging_product" => "whatsapp",
+                    "to" =>  $whatsappNumber,
+                    "type" => "template",
+                    "template" => array(
+                        "name" => "campaign_aed_699",
+                        "language" => array(
+                            "code" => "en"
+                        ),
+
+                        "components" => array(
+                            array(
+                                "type" => "header",
+                                "parameters" => array(
+                                    array(
+                                        'type' => 'image',
+                                        'image' => [
+                                            'link' => 'https://autoversa-media.s3.me-central-1.amazonaws.com/crm_auh_whatsapp_media/campaign_aed_699.png'
+                                        ]
+                                    ),
+                                )
+                            )
+                        )
+                    )
+                );
+
+                $returnMsg = $common->sendCustomerWhatsappMessage($messageData, '971509766075');
+
+                if (isset($returnMsg->messages)) {
+                    if ($returnMsg->messages[0]->id != "") {
+
+                        $wb_customer = new WhatsappCustomerMasterModel();
+                        $wb_message = new WhatsappCustomerMessageModel();
+                        $msg_customer = $wb_customer->where('SUBSTRING(wb_cus_mobile, -9)', $last9Digits)->first();
+
+                        if (!$msg_customer) {
+                            $tracker_data = [
+                                'wb_cus_name' => $customer_name != "" ? $customer_name :  $cust->lead_id,
+                                'wb_cus_mobile' => $whatsappNumber,
+                                'wb_cus_profile_pic' => '',
+                            ];
+                            $customer_id = $wb_customer->insert($tracker_data);
+                        } else {
+                            $customer_id = $msg_customer['wb_cus_id'];
+                            if (!empty($customerName)) {
+                                $update_data = ['wb_cus_name' =>  $customerName];
+                                $wb_customer->where('wb_cus_id', $msg_customer['wb_cus_id'])->set($update_data)->update();
+                            }
+                        }
+
+                        $message_data = [
+                            'alm_wb_msg_master_id' => $returnMsg->messages[0]->id,
+                            'alm_wb_msg_source' => 2,
+                            'alm_wb_msg_type' => $this->request->getVar('alm_wb_msg_type'),
+                            'alm_wb_msg_content' => "crm_auh_whatsapp_media/campaign_aed_699.png",
+                            'alm_wb_msg_caption' => "We’ve got an exclusive deal for you at Al Maraghi Auto Repairs! 🚘
+🛠️ Minor Service – Only AED 699
+ 
+Includes oil change, oil filter, air filter check, and more – all done by our expert technicians!
+
+* Quick Service
+* Genuine Parts
+* Professional Care
+
+📍 Location: https://g.co/kgs/UxRECYe
+ 🕒 Offer Valid Until: 31 May 2025
+
+Reply here to book your slot – we’ll take care of the rest! 🔧✨",
+
+                            'alm_wb_msg_status' => $this->request->getVar('alm_wb_msg_status'),
+                            'alm_wb_msg_customer' => $customer_id,
+                            'alm_wb_msg_reply_id' => '',
+                            'alm_wb_msg_camp_type' => $this->request->getVar('alm_wb_msg_camp_type'),
+                            'alm_wb_msg_created_on' => date("Y-m-d H:i:s.u"),
+                            'alm_wb_msg_updated_on' => date("Y-m-d H:i:s.u"),
+                        ];
+
+                        $result = $wb_message->insert($message_data);
+                        $exist_camp = $wb_camp->where("LOWER(alm_wb_camp_name)", $campaignName)->get()->getRowObject();
+
+
+
+                        if (!$exist_camp) {
+
+                            $campaign_data = [
+                                'alm_wb_camp_name' => $this->request->getVar("campaignName"),
+                                'alm_wb_camp_cust_count' => 1,
+                                'alm_wb_camp_date_from' => $this->request->getVar("campaignDateFrom"),
+                                'alm_wb_camp_date_to' => $this->request->getVar("campaignDateTo"),
+                                'alm_wb_camp_created_by' => $tokendata['uid'],
+                                'alm_wb_camp_created_on' => date("Y-m-d H:i:s.u"),
+                                'alm_wb_camp_type' => 6,
+                            ];
+
+                            $camp_data = $wb_camp->insert($campaign_data);
+
+                            $campaign_msg_data = [
+                                'alm_wb_camp_msg_wb_cus_id' => $customer_id,
+                                'alm_wb_camp_msg_wb_camp_id' => $camp_data,
+                                'alm_wb_camp_msg_wb_msg_id' => $result,
+                                'alm_wb_camp_msg_cus_phone' => $whatsappNumber,
+                                'alm_wb_camp_msg_created_on' => date("Y-m-d H:i:s.u"),
+                            ];
+
+                            $camp_msg_data = $wb_camp_message->insert($campaign_msg_data);
+                        } else {
+
+                            $totalCount = $exist_camp->alm_wb_camp_cust_count + 1;
+                            $campaign_data = [
+                                'alm_wb_camp_id' => $exist_camp->alm_wb_camp_id,
+                                'alm_wb_camp_cust_count' => $totalCount,
+                            ];
+                            $camp_data = $wb_camp->where('alm_wb_camp_id', $exist_camp->alm_wb_camp_id)->set($campaign_data)->update();
+
+                            $campaign_msg_data = [
+                                'alm_wb_camp_msg_wb_cus_id' => $customer_id,
+                                'alm_wb_camp_msg_wb_camp_id' => $exist_camp->alm_wb_camp_id,
+                                'alm_wb_camp_msg_wb_msg_id' => $result,
+                                'alm_wb_camp_msg_cus_phone' => $whatsappNumber,
+                                'alm_wb_camp_msg_created_on' => date("Y-m-d H:i:s.u"),
+                            ];
+                            $camp_msg_data = $wb_camp_message->insert($campaign_msg_data);
+                        }
+                    } else {
+
+                        $response = [
+                            'ret_data' => 'fail',
+                        ];
+
+                        return $this->respond($response, 200);
+                    }
+                } else {
+
+                    $response = [
+                        'ret_data' => $returnMsg,
+                    ];
+
+                    return $this->respond($response, 200);
+                }
+            }
+
+
+
+            if ($result) {
+                $response = [
+                    'ret_data' => 'success',
+                ];
+
+                return $this->respond($response, 200);
+            } else {
+
+                $response = [
+                    'ret_data' => 'fail',
+                ];
+
+                return $this->respond($response, 200);
+            }
+        } else {
+
+            $response = [
+                'ret_data' => 'fail',
+            ];
+
+            return $this->respond($response, 200);
+        }
+    }
+
+    public function searchWhatsappCustomersByPhoneNumbers()
+    {
+        $common = new Common();
+        $valid = new Validation();
+        $heddata = $this->request->headers();
+        $tokendata = $common->decode_jwt_token($valid->getbearertoken($heddata['Authorization']));
+
+        if ($tokendata['aud'] == 'superadmin') {
+            $SuperModel = new SuperAdminModel();
+            $super = $SuperModel->where("s_adm_id", $tokendata['uid'])->first();
+            if (!$super) return $this->fail("invalid user", 400);
+        } else if ($tokendata['aud'] == 'user') {
+            $usmodel = new UserModel();
+            $user = $usmodel->where("us_id", $tokendata['uid'])->first();
+            if (!$user) return $this->fail("invalid user", 400);
+        } else {
+            $data['ret_data'] = "Invalid user";
+            return $this->fail($data, 400);
+        }
+        if ($tokendata) {
+
+            $wb_message = new WhatsappCustomerMessageModel();
+            $wb_customer = new WhatsappCustomerMasterModel();
+
+            $searchNumbers = $this->request->getVar("searchNumbers"); // Expecting an array of phone numbers
+
+            // Step 1: Fetch all customers matching any phone number in the array
+            $customers = $wb_customer
+                ->groupStart()
+                ->orWhereIn('wb_cus_mobile', $searchNumbers) // Search for multiple numbers
+                ->groupEnd()
+                ->where('wb_cus_block', 0)
+                ->get()
+                ->getResultArray();
+
+
+            // Step 2: Fetch the latest message for each customer and merge its fields
+            foreach ($customers as &$customer) {
+                $latestMessage = $wb_message
+                    ->where('alm_wb_msg_customer', $customer['wb_cus_id'])
+                    ->orderBy('alm_wb_msg_created_on', 'DESC')
+                    ->first();
+
+                $customer['message_status_2_count'] = $wb_message
+                    ->where('alm_wb_msg_source', 1)
+                    ->where('alm_wb_msg_status', 2)
+                    ->where('alm_wb_msg_customer', $customer['wb_cus_id'])
+                    ->countAllResults();
+
+                if ($latestMessage) {
+                    // Merge latest message fields directly into the customer array
+                    foreach ($latestMessage as $key => $value) {
+                        $customer[$key] = $value;
+                    }
+                }
+            }
+
+
+
+
+
+
+            if ($customers) {
+                $response = [
+                    'ret_data' => 'success',
+                    'customers' => $customers,
+
+                ];
+                return $this->respond($response, 200);
+            } else {
+                $response = [
+                    'ret_data' => 'fail',
+                ];
+                return $this->respond($response, 200);
+            }
+        } else {
+            $response = [
+                'ret_data' => 'fail',
+            ];
+            return $this->respond($response, 200);
+        }
+    }
 
 
     public function sendCustomerServiceReminderCampaignMessage($customers, $type)
@@ -5248,7 +6404,6 @@ www.benzuae.com
                             'alm_wb_camp_created_on' => date("Y-m-d H:i:s.u"),
                         ];
                         $camp_data = $wb_camp->insert($campaign_data);
-                        log_message('error', 'Campaign New inserted' . $camp_data);
 
                         $campaign_msg_data = [
                             'alm_wb_camp_msg_wb_cus_id' => $customer_id,
@@ -5977,34 +7132,29 @@ www.benzuae.com
                 ->orderBy('alm_wb_camp_msg_id', 'DESC')
                 ->first();
 
-            log_message('error',  "Last Lead in createAutoAppointment  reg_no >>>>>>>>>" . json_encode($reg_no));
 
-            $alertMessage = "🔔 New Appointment Alert\n\nHello,\n\nCustomer Number [ " . $contact['wa_id'] . " ] has booked an appointment.\n\n"
-                . "📅 Date: " . $appdate . "\n"
-                . "⏰ Time: " . $formattedTime . "\n"
-                . "🚗 Reg No: " . ($reg_no ? $reg_no['alm_wb_camp_msg_cus_reg_no'] : 'N/A') . "\n\n"
-                . "Please take note. ✅";
+            // $alertMessage = "🔔 New Appointment Alert\n\nHello,\n\nCustomer Number [ " . $contact['wa_id'] . " ] has booked an appointment.\n\n"
+            //     . "📅 Date: " . $appdate . "\n"
+            //     . "⏰ Time: " . $formattedTime . "\n"
+            //     . "🚗 Reg No: " . ($reg_no ? $reg_no['alm_wb_camp_msg_cus_reg_no'] : 'N/A') . "\n\n"
+            //     . "Please take note. ✅";
 
-            $messageData = array(
-                "messaging_product" => "whatsapp",
-                "recipient_type" => "individual",
-                "to" => "+971503689528",
-                "type" => "text",
-                "text" => array(
-                    "body" => $alertMessage
-                )
-            );
+            // $messageData = array(
+            //     "messaging_product" => "whatsapp",
+            //     "recipient_type" => "individual",
+            //     "to" => "+918138055705",
+            //     "type" => "text",
+            //     "text" => array(
+            //         "body" => $alertMessage
+            //     )
+            // );
 
-            $returnMsg = $common->sendCustomerWhatsappMessage($messageData, '971509766075');
+            // $returnMsg = $common->sendCustomerWhatsappMessage($messageData, '971509766075');
 
             $service_Reminder = $wb_customer->select('wb_cus_reminder')
                 ->where('wb_cus_id', $msg_customer['wb_cus_id'])
                 ->get()
                 ->getRow('wb_cus_reminder');
-
-            log_message('error',  "Last Lead in createAutoAppointment  service_Reminder >>>>>>>>>" . json_encode($service_Reminder));
-
-
 
             if ($service_Reminder == '3') {
                 $apptm_type = 7;
@@ -6076,11 +7226,6 @@ www.benzuae.com
                 ->first();
 
 
-
-            // log_message('error',  "Last Lead in createAutoAppointment  pickup_mode >>>>>>>>>" . json_encode($pickup_mode));
-            // log_message('error',  "Last Lead in createAutoAppointment  pickup_mode >>>>>>>>>" . json_encode($pickup_mode['wb_cus_pickup_mode']));
-
-
             $apptMdata = [
                 'apptm_code' => $code,
                 'apptm_alternate_no' => $contact['wa_id'],
@@ -6149,19 +7294,23 @@ www.benzuae.com
                                     ),
                                     array(
                                         "type" => "text",
-                                        "text" =>  $apptTime, //"$this->request->getVar("timeFrom")"
+                                        "text" =>  $apptTime,
                                     ),
-                                    // array(
-                                    //     "type" => "text",
-                                    //     "text" =>  $reg_no['alm_wb_camp_msg_cus_reg_no'],
-                                    // ),
                                 )
                             )
                         )
                     )
                 );
                 // log_message('error',  "Last Lead in createAutoAppointment  message >>>>>>>>>" . json_encode($messageData));
+                // $returnMsg = $common->sendCustomerWhatsappMessage($messageData, '971509766075');
+
+                // Send to first number
                 $returnMsg = $common->sendCustomerWhatsappMessage($messageData, '971509766075');
+
+                // Send to another number
+                $messageData['to'] = '918138055705'; // Replace with second number
+                $returnMsg2 = $common->sendCustomerWhatsappMessage($messageData, '971509766075');
+
                 if (isset($returnMsg->messages)) {
                     if ($returnMsg->messages[0]->id != "") {
                         $wb_message = new WhatsappCustomerMessageModel();
@@ -6171,13 +7320,12 @@ www.benzuae.com
                             'alm_wb_msg_type' => 5,
                             'alm_wb_msg_content' => 'common_use/playstore.png',
                             'alm_wb_msg_status' => 1,
-                            'alm_wb_msg_caption' => 'Greetings from Al Maraghi Automotive.
+                            'alm_wb_msg_caption' => 'Greetings from Al Maraghi Automotive. 
                         We wanted to confirm your upcoming appointment for your Mercedes-Benz service.
                         Here are the details: 
                         DATE: ' . $appdate . '
                         TIME: ' . $apptTime . '
-                        REG NO: ' .  $reg_no['alm_wb_camp_msg_cus_reg_no'] . '
-                        Location:https://maps.app.goo.gl/v6CubY8wkWadQzYg9',
+                        Location: https://maps.app.goo.gl/v6CubY8wkWadQzYg9',
 
                             'alm_wb_msg_customer' => $msg_customer['wb_cus_id'],
                             'alm_wb_msg_reply_id' => '',
@@ -6190,12 +7338,11 @@ www.benzuae.com
                             'room_id' => 'crm_' . $msg_customer['wb_cus_mobile'],
                             'message_type' => 4,
                             'message_source' => 2,
-                            'message' => 'Greetings from Al Maraghi Automotive.
+                            'message' => 'Greetings from Al Maraghi Automotive. 
                         We wanted to confirm your upcoming appointment for your Mercedes-Benz service.
                         Here are the details: 
                         DATE: ' . $appdate . '
                         TIME: ' . $apptTime . '
-                        REG NO: ' .  $reg_no['alm_wb_camp_msg_cus_reg_no'] . '
                         Location: https://maps.app.goo.gl/v6CubY8wkWadQzYg9',
                             'time' => date('Y-m-d H:i:s'),
                             'toUserId' => 0,
@@ -6491,6 +7638,7 @@ www.benzuae.com
         $wb_customer = new WhatsappCustomerMasterModel();
 
         $result = $this->checkCustomerHasAppointment($msg_customer);
+
         $reminderData = $this->isCustomerSetRemindMeLater($msg_customer);
 
         $last_lead = $result['last_lead'];
@@ -6609,7 +7757,7 @@ www.benzuae.com
             "to" => $contact['wa_id'],
             "type" => "text",
             "text" => array(
-                "body" => "Thank you for reaching out! If you ever need assistance in the future, don’t hesitate to contact us at +97125503556. We're always here to help! 😊"
+                "body" => "Thank you for reaching out! If you ever need assistance in the future, don’t hesitate to contact us at +971505882207. We're always here to help! 😊"
             )
         );
 
@@ -6803,7 +7951,7 @@ www.benzuae.com
         }
     }
 
-  public function checkCustomerHasAppointment($msg_customer)
+    public function checkCustomerHasAppointment($msg_customer)
     {
         $Leadmodel = new LeadModel();
         $ApptMaster = new AppointmentMasterModel();
@@ -6927,7 +8075,7 @@ www.benzuae.com
                     ($last_lead['ld_appoint_date']
                         ? date('Y-m-d (l)', strtotime($last_lead['ld_appoint_date']))
                         : 'N/A') .
-                    ".* If you need any changes, feel free to contact us at +971 2 550 3556. ✅"
+                    ".* If you need any changes, feel free to contact us at +97142883399. ✅"
             )
 
 
@@ -7203,6 +8351,7 @@ If you’d like to update it, feel free to reach out! 😊📲";
         $wb_message = new WhatsappCustomerMessageModel();
         $wb_customer = new WhatsappCustomerMasterModel();
 
+
         $decodedLocation = json_decode($location, true);
 
         if (is_array($decodedLocation) && isset($decodedLocation['lat'], $decodedLocation['lng'])) {
@@ -7304,6 +8453,133 @@ If you’d like to update it, feel free to reach out! 😊📲";
                 }
             }
         }
+
+        // if (is_string($location)) {
+        //     $location = json_decode($location, true);
+        // }
+
+        // $targetLat = 24.35755881778278;
+        // $targetLng = 54.50323220808948;
+
+        // // Earth's radius in kilometers
+        // $earthRadius = 6371;
+
+        // // Calculate differences in coordinates in radians
+        // $dLat = deg2rad($targetLat - $location['lat']);
+        // $dLng = deg2rad($targetLng - $location['lng']);
+
+        // // Apply the Haversine formula to calculate the distance in km
+        // $a = sin($dLat / 2) * sin($dLat / 2) +
+        //     cos(deg2rad($location['lat'])) * cos(deg2rad($targetLat)) *
+        //     sin($dLng / 2) * sin($dLng / 2);
+        // $c = 2 * atan2(sqrt($a), sqrt(1 - $a));
+        // $distance = $earthRadius * $c;
+
+        // // Set $lessthan50Km based on the calculated distance
+        // $lessthan50Km = ($distance <= 50);
+
+        // if (isWithinAbuDhabi((float) $latitude, (float) $longitude)) {
+        //     return $this->respond(['status' => true, 'message' => 'Location is inside Abu Dhabi']);
+        // } else {
+        //     return $this->respond(['status' => false, 'message' => 'Location is outside Abu Dhabi']);
+        // }
+
+        // log_message('error',  "isCustomerWithin50KM >>>lessthan50Km>>" . json_encode($lessthan50Km));
+
+        // if ($lessthan50Km) {
+        //     $this->getCustomerAppointmentDate($contact, $msg_customer);
+        // } else {
+
+        //     $messageData = array(
+        //         "messaging_product" => "whatsapp",
+        //         "recipient_type" => "individual",
+        //         "to" => $contact['wa_id'],
+        //         "type" => "interactive",
+        //         "interactive" => array(
+        //             "type" => "button",
+        //             "body" => array(
+        //                 "text" => "🚗 Free pickup & drop-off isn't available. Would you like to continue with the paid service? 💰"
+        //             ),
+        //             "action" => array(
+        //                 "buttons" => array(
+        //                     array(
+        //                         "type" => "reply",
+        //                         "reply" => array(
+        //                             "id" => "yes_paid",
+        //                             "title" => "✅ Yes, Continue"
+        //                         )
+        //                     ),
+        //                     array(
+        //                         "type" => "reply",
+        //                         "reply" => array(
+        //                             "id" => "no_cancel",
+        //                             "title" => "❌ No, Cancel"
+        //                         )
+        //                     )
+        //                 )
+        //             )
+        //         )
+        //     );
+
+        //     $returnMsg = $common->sendCustomerWhatsappMessage($messageData, '971509766075');
+
+        //     log_message('error',  "I am here at button Escalte to Our Representative >>>>>" . json_encode($returnMsg));
+
+        //     if (isset($returnMsg->messages)) {
+        //         if ($returnMsg->messages[0]->id != "") {
+        //             $bodyText = $messageData['interactive']['body']['text'];
+        //             $buttons = $messageData['interactive']['action']['buttons'];
+
+        //             $buttonTexts = [];
+        //             foreach ($buttons as $button) {
+        //                 $buttonTexts[] = $button['reply']['title'];
+        //             }
+
+        //             // Format the message with a line break before options
+        //             $formattedText = $bodyText . "\n\n" . implode("\n", $buttonTexts);
+        //             $message_data = [
+        //                 'alm_wb_msg_master_id' => $returnMsg->messages[0]->id,
+        //                 'alm_wb_msg_source' => 2,
+        //                 'alm_wb_msg_type' => 4,
+        //                 'alm_wb_msg_content' => $formattedText,
+        //                 'alm_wb_msg_status' => 1,
+        //                 'alm_wb_msg_customer' => $msg_customer['wb_cus_id'],
+        //                 'alm_wb_msg_reply_id' => '',
+        //                 'alm_wb_msg_created_on' => date("Y-m-d H:i:s.u"),
+        //                 'alm_wb_msg_updated_on' => date("Y-m-d H:i:s.u"),
+        //                 'alm_wb_msg_staff_id' => 1,
+        //             ];
+        //             $result = $wb_message->insert($message_data);
+        //             $data = [
+        //                 'room_id' => 'crm_' . $msg_customer['wb_cus_mobile'],
+        //                 'message_type' => 4,
+        //                 'message_source' => 2,
+        //                 'message' => $formattedText,
+        //                 'time' => date('Y-m-d H:i:s'),
+        //                 'toUserId' => 1,
+        //                 'fromUserId' => $msg_customer
+        //             ];
+        //             $this->sendSocketMessage($data);
+        //             $mobile = $msg_customer['wb_cus_mobile'];
+        //             $currentFollowUp = $wb_customer->where('wb_cus_mobile', $mobile)->select('wb_cus_follow_up')->first();
+        //             if ($currentFollowUp) {
+        //                 $followUpCount = $currentFollowUp['wb_cus_follow_up'];
+        //                 if ($followUpCount < 3 && $followUpCount != 1 && $followUpCount != 0) {
+        //                     $followUpCount++;
+        //                 } else if ($followUpCount == 3) {
+        //                     $followUpCount = 6;
+        //                 } else if ($followUpCount == 1) {
+        //                     $followUpCount = 2;
+        //                 }
+        //                 $tracker_data = [
+        //                     'wb_cus_follow_up' => $followUpCount,
+        //                     'wb_cus_follow_up_time' => date('Y-m-d H-i-s'),
+        //                 ];
+        //                 $wb_customer->where('wb_cus_mobile', $mobile)->set($tracker_data)->update();
+        //             }
+        //         }
+        //     }
+        // }
     }
 
     public function notInterestedOption($contact, $msg_customer)
@@ -7415,14 +8691,23 @@ If you’d like to update it, feel free to reach out! 😊📲";
 
 
     public function isWithinDubai($latitude, $longitude)
+
     {
+
         // Approximate boundary of Dubai
+
         $minLat = 24.8;
+
         $maxLat = 25.4;
+
         $minLng = 54.8;
+
         $maxLng = 55.6;
 
+
+
         return ($latitude >= $minLat && $latitude <= $maxLat) &&
+
             ($longitude >= $minLng && $longitude <= $maxLng);
     }
 
@@ -7660,6 +8945,28 @@ If you’d like to update it, feel free to reach out! 😊📲";
         $wb_message = new WhatsappCustomerMessageModel();
         $wb_customer = new WhatsappCustomerMasterModel();
 
+        $builder = $this->db->table('whatsapp_automated_message_content');
+        $row = $builder->where('wamc_id', 1)->where('wamc_delete_flag', 0)->get()->getRow();
+
+        if (!$row || empty($row->wamc_message_content)) return;
+
+        $messageText = $row->wamc_message_content;
+
+        // Replace placeholders dynamically
+        $variables = [
+            '{name}' => $msg_customer['wb_cus_name'],
+            '{company}' => 'Al-Maraghi', // can also come from DB
+            '{email}' => $msg_customer['wb_cus_email'] ?? '',
+            '{phone}' => $msg_customer['wb_cus_mobile'] ?? '',
+            '{service}' => 'Car Wash', // static or dynamic
+            '{date}' => date('Y-m-d'),
+            '{time}' => date('h:i A')
+        ];
+
+        $messageTextFinal = strtr($messageText, $variables);
+
+        // log_message('error', "Away message sent: " . $messageTextFinal);
+
         $messageData = array(
             "messaging_product" => "whatsapp",
             "recipient_type" => "individual",
@@ -7668,10 +8975,11 @@ If you’d like to update it, feel free to reach out! 😊📲";
             "interactive" => array(
                 "type" => "button",
                 "body" => array(
-                    "text" => "Thank you for reaching out to *Al Maraghi Auto Repairs – Dubai* ! \n\nWe're currently unavailable, but don't worry we'll get back to you as soon as we're online.\n\nIn the meantime, please select an option below:"
+                    "text" => $messageTextFinal,
+                    // "text" => "Thank you for reaching out to *Al Maraghi Auto Repairs – Abu Dhabi* ! \n\nWe're currently unavailable, but don't worry we'll get back to you as soon as we're online.\n\nIn the meantime, please select an option below:"
                 ),
                 // "body" => array(
-                //     "text" => "Thank you for reaching out to *Al Maraghi Auto Repairs – Dubai*!\n\nWe are currently unavailable as we are on an Eid holiday.\n\nWe will reopen on Monday June 9th and will get back to you as soon as possible.\n\nAl Maraghi wishing you and your loved ones a joyous and blessed Eid! 🌙✨"
+                //     "text" => "Thank you for reaching out to *Al Maraghi Auto Repairs – Abu Dhabi*!\n\nWe are currently unavailable as we are on an Eid holiday.\n\nWe will reopen on Monday June 9th and will get back to you as soon as possible.\n\nAl Maraghi wishing you and your loved ones a joyous and blessed Eid! 🌙✨"
                 // ),
                 "footer" => array(
                     "text" => "Tap an option to respond."
@@ -7764,79 +9072,6 @@ If you’d like to update it, feel free to reach out! 😊📲";
         }
     }
 
-    public function sendAwayMessageToCustomer($data)
-    {
-        $common = new Common();
-        $wb_message = new WhatsappCustomerMessageModel();
-        $wb_customer = new WhatsappCustomerMasterModel();
-
-        $messageData = array(
-            "messaging_product" => "whatsapp",
-            "to" => $data['alm_wb_msg_mobile'],
-            "type" => "text",
-            'text' => [
-                'body' => $data['alm_wb_msg_content']
-            ]
-        );
-        $returnMsg = $common->sendCustomerWhatsappMessage($messageData, '971509766075');
-        if (isset($returnMsg->messages)) {
-            if ($returnMsg->messages[0]->id != "") {
-                log_message('error', 'Webhook Error: ' . $returnMsg->messages[0]->id);
-                $message_data = [
-                    'alm_wb_msg_master_id' => $returnMsg->messages[0]->id,
-                    'alm_wb_msg_source' => 2,
-                    'alm_wb_msg_type' => $data['alm_wb_msg_type'],
-                    'alm_wb_msg_content' => $data['alm_wb_msg_content'],
-                    'alm_wb_msg_status' => $data['alm_wb_msg_status'],
-                    'alm_wb_msg_customer' => $data['alm_wb_msg_customer'],
-                    'alm_wb_msg_reply_id' => '',
-                    'alm_wb_msg_created_on' => date("Y-m-d H:i:s.u"),
-                    'alm_wb_msg_updated_on' => date("Y-m-d H:i:s.u"),
-                    'alm_wb_msg_staff_id' => 1,
-                ];
-                $result = $wb_message->insert($message_data);
-                $mobile = $data['alm_wb_msg_mobile'];
-                $currentFollowUp = $wb_customer->where('wb_cus_mobile', $mobile)->select('wb_cus_follow_up')->first();
-                if ($currentFollowUp) {
-                    $followUpCount = $currentFollowUp['wb_cus_follow_up'];
-                    if ($followUpCount < 3 && $followUpCount != 1 && $followUpCount != 0) {
-                        $followUpCount++;
-                    } else if ($followUpCount == 3) {
-                        $followUpCount = 6;
-                    } else if ($followUpCount == 1) {
-                        $followUpCount = 2;
-                    }
-                    $tracker_data = [
-                        'wb_cus_follow_up' => $followUpCount,
-                        'wb_cus_follow_up_time' => date('Y-m-d H-i-s'),
-                    ];
-                    $wb_customer->where('wb_cus_mobile', $mobile)->set($tracker_data)->update();
-                }
-                if ($result) {
-                    $response = [
-                        'ret_data' => 'success',
-                    ];
-                    return $this->respond($response, 200);
-                } else {
-                    $response = [
-                        'ret_data' => 'fail',
-                    ];
-                    return $this->respond($response, 200);
-                }
-            } else {
-                $response = [
-                    'ret_data' => 'fail',
-                ];
-                return $this->respond($response, 200);
-            }
-        } else {
-            $response = [
-                'ret_data' => $returnMsg,
-            ];
-            return $this->respond($response, 200);
-        }
-    }
-
     public function updateWhatsappAutoMessageHours()
     {
         $common = new Common();
@@ -7870,6 +9105,90 @@ If you’d like to update it, feel free to reach out! 😊📲";
         }
     }
 
+    public function getPurposeNot()
+    {
+
+        $common = new Common();
+        $valid = new Validation();
+
+        $heddata = $this->request->headers();
+        $tokendata = $common->decode_jwt_token($valid->getbearertoken($heddata['Authorization']));
+
+        if ($tokendata['aud'] == 'superadmin') {
+            $SuperModel = new SuperAdminModel();
+            $super = $SuperModel->where("s_adm_id", $tokendata['uid'])->first();
+            if (!$super) return $this->fail("invalid user", 400);
+        } else if ($tokendata['aud'] == 'user') {
+            $usmodel = new UserModel();
+            $user = $usmodel->where("us_id", $tokendata['uid'])->first();
+            if (!$user) return $this->fail("invalid user", 400);
+        } else {
+            $data['ret_data'] = "Invalid user";
+            return $this->fail($data, 400);
+        }
+        if ($tokendata) {
+
+            $wb_customer = new WhatsappCustomerMasterModel();
+            $category = $this->request->getVar('categorizes');
+            $limit = $this->request->getVar('limit');
+            $offset = $this->request->getVar('offset');
+
+            $db = \Config\Database::connect();
+
+            if ($category == "7") {
+                $category = "0";
+            }
+
+            // Subquery to get the latest message per customer
+            $subLatestMsg = $db->table('alm_whatsapp_cus_messages')
+                ->select('alm_wb_msg_customer, MAX(alm_wb_msg_id) as latest_msg_id')
+                ->groupBy('alm_wb_msg_customer')
+                ->getCompiledSelect();
+
+            // Main query: Join customers with their latest message
+            $query = $db->table('alm_whatsapp_customers as c')
+                ->select([
+                    'c.wb_cus_id',
+                    'c.wb_cus_name',
+                    'c.wb_cus_mobile',
+                    'wm.alm_wb_msg_id',
+                    'wm.alm_wb_msg_caption',
+                    'wm.alm_wb_msg_content',
+                    'wb_cus_category',
+                    'wm.alm_wb_msg_status',
+                    'wm.alm_wb_msg_created_on',
+                    'wm.alm_wb_msg_updated_on',
+                ])
+                ->join("($subLatestMsg) as lm", 'lm.alm_wb_msg_customer = c.wb_cus_id', 'left')
+                ->join('alm_whatsapp_cus_messages as wm', 'wm.alm_wb_msg_id = lm.latest_msg_id', 'left');
+            // ->where('c.wb_cus_category', $category)
+            if ($category != 0) {
+                $query->where('c.wb_cus_lead_category', $category);
+            } else {
+                $query->where('c.wb_cus_category', $category);
+            }
+            $query->where('c.wb_cus_block', 0)
+                ->orderBy('lm.latest_msg_id', 'DESC') // Order by latest message first
+                ->limit($limit, $offset); // Apply pagination here
+
+            $customers = $query->get()->getResultArray();
+
+            if ($customers) {
+                $response = [
+                    'ret_data' => 'success',
+                    'wb_customers' => $customers
+                ];
+                return $this->respond($response, 200);
+            } else {
+                $response = [
+                    'ret_data' => 'success',
+                    'wb_customers' => []
+                ];
+                return $this->respond($response, 200);
+            }
+        }
+    }
+
     public function sendLeaveAMessageToCustomer($data)
     {
         $common = new Common();
@@ -7891,7 +9210,7 @@ If you’d like to update it, feel free to reach out! 😊📲";
         $returnMsg = $common->sendCustomerWhatsappMessage($messageData, '971509766075');
         if (isset($returnMsg->messages)) {
             if ($returnMsg->messages[0]->id != "") {
-                log_message('error', 'Webhook Error: ' . $returnMsg->messages[0]->id);
+                // log_message('error', 'Webhook Error: ' . $returnMsg->messages[0]->id);
                 $message_data = [
                     'alm_wb_msg_master_id' => $returnMsg->messages[0]->id,
                     'alm_wb_msg_source' => 2,
@@ -7944,6 +9263,294 @@ If you’d like to update it, feel free to reach out! 😊📲";
                 'ret_data' => $returnMsg,
             ];
             return $this->respond($response, 200);
+        }
+    }
+
+    public function updateLeadCategory()
+    {
+        $common = new Common();
+        $valid = new Validation();
+        $heddata = $this->request->headers();
+        $tokendata = $common->decode_jwt_token($valid->getbearertoken($heddata['Authorization']));
+
+        if ($tokendata['aud'] == 'superadmin') {
+            $SuperModel = new SuperAdminModel();
+            $super = $SuperModel->where("s_adm_id", $tokendata['uid'])->first();
+            if (!$super) return $this->fail("invalid user", 400);
+        } else if ($tokendata['aud'] == 'user') {
+            $usmodel = new UserModel();
+            $user = $usmodel->where("us_id", $tokendata['uid'])->first();
+            if (!$user) return $this->fail("invalid user", 400);
+        } else {
+            $data['ret_data'] = "Invalid user";
+            return $this->fail($data, 400);
+        }
+        if ($tokendata) {
+            $lmodel = new LeadModel();
+            $lmodel->set('lead_category', $this->request->getVar("lead_category"))->where('lead_id', $this->request->getVar("lead_id"))->update();
+            $response = [
+                'ret_data' => 'success',
+            ];
+            return $this->respond($response, 200);
+        } else {
+            $response = [
+                'ret_data' => 'fail',
+            ];
+            return $this->respond($response, 200);
+        }
+    }
+
+    public function getLeadCategoryCount()
+    {
+        $common = new Common();
+        $valid = new Validation();
+        $heddata = $this->request->headers();
+        $tokendata = $common->decode_jwt_token($valid->getbearertoken($heddata['Authorization']));
+
+        if ($tokendata['aud'] == 'superadmin') {
+            $SuperModel = new SuperAdminModel();
+            $super = $SuperModel->where("s_adm_id", $tokendata['uid'])->first();
+            if (!$super) return $this->fail("invalid user", 400);
+        } else if ($tokendata['aud'] == 'user') {
+            $usmodel = new UserModel();
+            $user = $usmodel->where("us_id", $tokendata['uid'])->first();
+            if (!$user) return $this->fail("invalid user", 400);
+        } else {
+            $data['ret_data'] = "Invalid user";
+            return $this->fail($data, 400);
+        }
+        if ($tokendata) {
+            $wb_customer = new WhatsappCustomerMasterModel();
+            $builder = $wb_customer->builder();
+
+            $status = [1, 7, 8];    //->orWhere('status_id', '7')
+            $builder->select('wb_cus_lead_category, COUNT(*) AS total ,lead_category')
+                ->join('leads', 'SUBSTRING(leads.phone, -9) = SUBSTRING(wb_cus_mobile, -9)', 'left')
+                ->where('wb_cus_block', 0)
+                ->whereIn('leads.status_id', $status)
+                ->groupBy('lead_category');
+            $queryResults = $builder->get()->getResultArray();
+
+            $counts = [
+                'hot' => 0,
+                'warm' => 0,
+                'cool' => 0,
+            ];
+
+            // Map counts based on category
+            foreach ($queryResults as $row) {
+                switch ((int)$row['lead_category']) {
+                    case 2:
+                        $counts['hot'] = (int)$row['total'];
+                        break;
+                    case 1:
+                        $counts['warm'] = (int)$row['total'];
+                        break;
+                    case 0:
+                        $counts['cool'] = (int)$row['total'];
+                        break;
+                }
+            }
+
+            if ($queryResults) {
+                $response = [
+                    'ret_data' => 'success',
+                    'data' => $counts,
+                ];
+            } else {
+                $response = [
+                    'ret_data' => 'fail',
+                    'data' => $counts
+                ];
+            }
+            return $this->respond($response, 200);
+        }
+    }
+
+    public function getLeadCategoryCustomers()
+    {
+
+        $common = new Common();
+        $valid = new Validation();
+
+        $heddata = $this->request->headers();
+        $tokendata = $common->decode_jwt_token($valid->getbearertoken($heddata['Authorization']));
+
+        if ($tokendata['aud'] == 'superadmin') {
+            $SuperModel = new SuperAdminModel();
+            $super = $SuperModel->where("s_adm_id", $tokendata['uid'])->first();
+            if (!$super) return $this->fail("invalid user", 400);
+        } else if ($tokendata['aud'] == 'user') {
+            $usmodel = new UserModel();
+            $user = $usmodel->where("us_id", $tokendata['uid'])->first();
+            if (!$user) return $this->fail("invalid user", 400);
+        } else {
+            $data['ret_data'] = "Invalid user";
+            return $this->fail($data, 400);
+        }
+        if ($tokendata) {
+
+            $wb_customer = new WhatsappCustomerMasterModel();
+            $type = $this->request->getVar('type');
+            $limit = $this->request->getVar('limit');
+            $offset = $this->request->getVar('offset');
+            $status = [1, 7, 8];
+
+            $db = \Config\Database::connect();
+
+            // Subquery to get latest lead per phone
+            $subLatestLead = $db->table('leads')
+                ->select('phone, MAX(lead_id) as latest_lead_id')
+                ->groupBy('phone')
+                ->getCompiledSelect();
+
+            // Subquery to get the latest message per customer
+            $subLatestMsg = $db->table('alm_whatsapp_cus_messages')
+                ->select('alm_wb_msg_customer, MAX(alm_wb_msg_id) as latest_msg_id')
+                ->groupBy('alm_wb_msg_customer')
+                ->getCompiledSelect();
+
+            // Main query: Join customers with their latest message
+            $query = $db->table('alm_whatsapp_customers as c')
+                ->select([
+                    'c.wb_cus_id',
+                    'c.wb_cus_name',
+                    'c.wb_cus_mobile',
+                    'wm.alm_wb_msg_id',
+                    'wm.alm_wb_msg_caption',
+                    'wm.alm_wb_msg_content',
+                    'wb_cus_category',
+                    'wm.alm_wb_msg_status',
+                    'wm.alm_wb_msg_created_on',
+                    'wm.alm_wb_msg_updated_on',
+                    'ld.lead_category',
+                    'ld.lead_id',
+                ])
+                ->join("($subLatestMsg) as lm", 'lm.alm_wb_msg_customer = c.wb_cus_id', 'left')
+                ->join('alm_whatsapp_cus_messages as wm', 'wm.alm_wb_msg_id = lm.latest_msg_id', 'left')
+                ->join("($subLatestLead) as ll", 'll.phone = c.wb_cus_mobile', 'left')
+                ->join('leads as ld', 'ld.lead_id = ll.latest_lead_id', 'left')
+                ->where('ld.lead_category', $type)
+                ->whereIn('ld.status_id', $status)
+                ->groupBy('c.wb_cus_id')
+                ->where('c.wb_cus_block', 0)
+                ->orderBy('lm.latest_msg_id', 'DESC') // Order by latest message first
+                ->limit($limit, $offset); // Apply pagination here
+
+            $customers = $query->get()->getResultArray();
+
+            if ($customers) {
+                $response = [
+                    'ret_data' => 'success',
+                    'wb_customers' => $customers
+                ];
+                return $this->respond($response, 200);
+            } else {
+                $response = [
+                    'ret_data' => 'success',
+                    'wb_customers' => []
+                ];
+                return $this->respond($response, 200);
+            }
+        }
+    }
+
+
+    public function testMessageSend()
+    {
+        $common = new Common();
+        $valid = new Validation();
+
+        $heddata = $this->request->headers();
+        $tokendata = $common->decode_jwt_token($valid->getbearertoken($heddata['Authorization']));
+
+        // Validate user
+        if ($tokendata['aud'] == 'superadmin') {
+            $SuperModel = new SuperAdminModel();
+            $super = $SuperModel->where("s_adm_id", $this->db->escapeString($tokendata['uid']))->first();
+            if (!$super) return $this->fail("invalid user", 400);
+        } elseif ($tokendata['aud'] == 'user') {
+            $usmodel = new UserModel();
+            $user = $usmodel->where("us_id", $this->db->escapeString($tokendata['uid']))->first();
+            if (!$user) return $this->fail("invalid user", 400);
+        } else {
+            return $this->fail("Invalid user", 400);
+        }
+
+        try {
+
+            $custNum = $this->request->getVar('custNumber');
+            $messageContent = $this->request->getVar('msgContent');
+
+            $messageData = array(
+                "messaging_product" => "whatsapp",
+                "recipient_type" => "individual",
+                "to" => $custNum,
+                "type" => "interactive",
+                "interactive" => array(
+                    "type" => "button",
+                    "body" => array(
+                        "text" => $messageContent,
+                    ),
+                    "footer" => array(
+                        "text" => "Tap an option to respond."
+                    ),
+                    "action" => array(
+                        "buttons" => array(
+                            array(
+                                "type" => "reply",
+                                "reply" => array(
+                                    "id" => "Book_An_Appointment",
+                                    "title" => "📅 Book Appointment"
+                                )
+                            ),
+                            array(
+                                "type" => "reply",
+                                "reply" => array(
+                                    "id" => "leave_message",
+                                    "title" => "💬 Leave a Message"
+                                )
+                            ),
+                            array(
+                                "type" => "reply",
+                                "reply" => array(
+                                    "id" => "view_working_hours",
+                                    "title" => "🕒 View Working Hours"
+                                )
+                            ),
+                        )
+                    )
+                )
+            );
+
+            $returnMsg = $common->sendCustomerWhatsappMessage($messageData, '971509766075');
+            // log_message("error", "Unexpected Whatsapp response: " . json_encode($returnMsg));
+
+            if (isset($returnMsg->messages)) {
+                // log_message("error", "Whatsapp message sent successfully: " . json_encode($returnMsg));
+            } elseif (isset($returnMsg->error)) {
+                // log_message("error", "Whatsapp message failed: " . json_encode($returnMsg));
+            } else {
+                // log_message("error", "Unexpected Whatsapp response: " . json_encode($returnMsg));
+            }
+
+
+            if ($returnMsg) {
+                return $this->response->setJSON([
+                    'ret_data' => 'success',
+                    'message' => 'Message Sent Succesfully.'
+                ]);
+            } else {
+                return $this->response->setJSON([
+                    'ret_data' => 'fail',
+                    'message'  => 'Failed to Sent Message.'
+                ]);
+            }
+        } catch (\Exception $e) {
+            return $this->response->setJSON([
+                'ret_data' => 'fail',
+                'message' => $e->getMessage()
+            ]);
         }
     }
 }

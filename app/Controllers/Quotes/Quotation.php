@@ -65,7 +65,7 @@ class Quotation extends ResourceController
             return $this->fail($data, 400);
         }
         if ($tokendata) {
-            $res = $modelQ->select('qt_id,qt_code,qt_cus_name,qt_cus_contact,qt_vin,qt_reg_no,qt_chasis,qt_make,qt_odometer,qt_service_adv,qt_parts_adv,qt_jc_no,qt_cus_id,qt_lead_id,qt_type,qt_amount,qt_tax,qt_total,sau.us_firstname as sa_name,sau.us_email as sa_email,pau.us_firstname as pa_name,pau.us_email as pa_email,qt_margin_flag')
+            $res = $modelQ->select('qt_id,qt_code,qt_cus_name,qt_cus_contact,qt_vin,qt_reg_no,qt_chasis,qt_make,qt_odometer,qt_service_adv,qt_parts_adv,qt_jc_no,qt_cus_id,qt_lead_id,qt_type,qt_amount,qt_tax,qt_total,sau.us_firstname as sa_name,sau.us_email as sa_email,pau.us_firstname as pa_name,pau.us_email as pa_email,')
                 ->where('qt_delete_flag', 0)
                 ->where('qt_type', 1)
                 ->join('users sau', 'sau.us_id=qt_service_adv', 'left')
@@ -631,7 +631,7 @@ class Quotation extends ResourceController
                 'avail_print' => $this->request->getVar('avail_print'),
                 'part_code_print' => $this->request->getVar('part_code_print'),
                 'qt_service_adv' => $this->request->getVar('qt_service_adv'),
-                'qt_margin_flag' => $this->request->getVar('marginFlag') == true ? 1 : 0,
+                'qt_margin_flag' => $this->request->getVar('marginFlag') ? 1 : 0,
             ];
             $res = $modelQ->update($this->request->getVar('qt_id'), $data);
             if ($res) {
@@ -685,8 +685,8 @@ class Quotation extends ResourceController
                                         'qit_discount' => 0,
                                         'qit_created_by' => $tokendata['uid'],
                                         'qit_delete_flag' => $part_type->qit_delete_flag,
-                                        'qit_old_margin_price' => $part_type->old_margin_total,
-                                        'qit_margin_price' => $part_type->margin_total,
+                                        'qit_old_margin_price' => $part_type->old_margin_total ?? 0,
+                                        'qit_margin_price' => $part_type->margin_total ?? 0,
                                     );
                                 } else {
                                     $insdData[] = array(
@@ -699,8 +699,8 @@ class Quotation extends ResourceController
                                         'qit_discount' => 0,
                                         'qit_created_by' => $tokendata['uid'],
                                         'qit_delete_flag' => $part_type->qit_delete_flag,
-                                        'qit_old_margin_price' => $part_type->old_margin_total,
-                                        'qit_margin_price' => $part_type->margin_total,
+                                        'qit_old_margin_price' => $part_type->old_margin_total ?? 0,
+                                        'qit_margin_price' => $part_type->margin_total ?? 0,
                                     );
                                 }
                             }
@@ -741,8 +741,8 @@ class Quotation extends ResourceController
                                     'qit_type' => $part_type->qit_type,
                                     'qit_availability' => $part_type->qit_availability,
                                     'qit_unit_price' => $part_type->qit_unit_price,
-                                    'qit_old_margin_price' => $part_type->old_margin_total,
-                                    'qit_margin_price' => $part_type->margin_total,
+                                    'qit_old_margin_price' => $part_type->old_margin_total ?? 0,
+                                    'qit_margin_price' => $part_type->margin_total ?? 0,
                                     'qit_discount' => 0,
                                     'qit_created_by' => $tokendata['uid'],
                                     'qit_delete_flag' => $part_type->qit_delete_flag,
@@ -1751,6 +1751,67 @@ class Quotation extends ResourceController
                 'quotes_log' => []
             ];
             return $this->respond($response, 200);
+        }
+    }
+
+    public function getQuoteDetailsByIdView()
+    {
+        $modelQT = new QuotesItemModel();
+        $modelQ = new QuotesMasterModel();
+        $common = new Common();
+        $valid = new Validation();
+        $heddata = $this->request->headers();
+        $tokendata = $common->decode_jwt_token($valid->getbearertoken($heddata['Authorization']));
+        if ($tokendata['aud'] == 'superadmin') {
+            $SuperModel = new SuperAdminModel();
+            $super = $SuperModel->where("s_adm_id", $tokendata['uid'])->first();
+            if (!$super) return $this->fail("invalid user", 400);
+        } else if ($tokendata['aud'] == 'user') {
+            $usmodel = new UserModel();
+            $user = $usmodel->where("us_id", $tokendata['uid'])->first();
+            if ($user['us_role_id'] == 2) {
+                $sa = $user['us_id'];
+            } else if ($user['us_role_id'] == 3) {
+                $pa = $user['us_id'];
+            }
+            if (!$user) return $this->fail("invalid user", 400);
+        } else {
+            $data['ret_data'] = "Invalid user";
+            return $this->fail($data, 400);
+        }
+        if ($tokendata) {
+            $data = $this->request->getJSON();
+
+            $quoteid = base64_decode($data->qt_id);
+            $res = $modelQ->select('qt_id,qt_code,qt_type,qt_cus_name,qt_cus_contact,qt_vin,qt_reg_no,qt_chasis,qt_make,qt_odometer,qt_service_adv,qt_parts_adv,qt_jc_no,qt_cus_id,qt_lead_id,qt_type,qt_amount,qt_tax,qt_total,part_code_print,avail_print,part_type_print,brand_print,qt_camp_id,sau.us_firstname as sa_name,sau.us_email as sa_email,pau.us_firstname as pa_name,pau.us_email as pa_email,qt_vehicle_value,qt_margin_flag')
+                ->where('qt_id', $quoteid)
+                ->where('qt_delete_flag', 0)
+                ->join('users sau', 'sau.us_id=qt_service_adv', 'left')
+                ->join('users pau', 'pau.us_id=qt_parts_adv', 'left')
+                ->join('campaign', 'campaign.camp_id=qt_camp_id', 'left')
+                ->orderBy('qt_id', 'desc')
+                ->first();
+            if ($res) {
+                $qt_items = $modelQT->where('qt_id', $quoteid)
+                    ->where('item_delete_flag', 0)
+                    // ->where('its.qit_delete_flag', 0)
+                    ->join('quote_item_types its', 'its.qit_item_id=item_id', 'left')
+                    ->join('brand_list as bl', 'bl.brand_id=its.qit_brand', 'left')
+                    ->findAll();
+                // $this->insertUserLog('View Normal Quotation Data for Update', $tokendata['uid']);
+                $response = [
+                    'ret_data' => 'success',
+                    'quotation' => $res,
+                    'qt_items' => $qt_items
+                ];
+                return $this->respond($response, 200);
+            } else {
+                $response = [
+                    'ret_data' => 'fail',
+                    'quotation' => []
+                ];
+                return $this->fail($response, 409);
+            }
         }
     }
 }

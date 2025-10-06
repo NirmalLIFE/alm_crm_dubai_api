@@ -142,7 +142,7 @@ class TrunkList extends ResourceController
                 'ret_data' => 'success',
                 'dept' => $res,
                 'trunk' => $tr,
-                'trunk_name' => !empty($result) ? $result : '',
+                'trunk_name' => $result,
                 'featurelist' => $ftr,
                 'dept_ft' => $depftr
             ];
@@ -212,7 +212,7 @@ class TrunkList extends ResourceController
                     ];
                     array_push($in_data, $infdata);
                 }
-                if (sizeof($in_data) > 0) {
+                if(sizeof($in_data)>0){
                     $ret = $model->insertBatch($in_data);
                 }
                 $in_data = array();

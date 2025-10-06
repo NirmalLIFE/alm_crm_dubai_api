@@ -97,9 +97,16 @@
 
     <table class="customer body_master">
         <tr>
-            <td colspan="2" align="center">
-                <h5 style="font-family: DejaVu Sans, sans-serif;text-align: center;">QUOTATION - <?= $qt_master['qt_code'] . "_V" . $qt_versions['qvm_version_no']; ?></h5>
-            </td>
+            <?php if ($type != 4) { ?>
+                <td colspan="2" align="center">
+                    <h5 style="font-family: DejaVu Sans, sans-serif;text-align: center;">QUOTATION - <?= $qt_master['qt_code'] . "_V" . $qt_versions['qvm_version_no']; ?></h5>
+                </td>
+            <?php } ?>
+            <?php if ($type == 4) { ?>
+                <td colspan="2" align="center">
+                    <h5 style="font-family: DejaVu Sans, sans-serif;text-align: center;">SPARE INVOICE - <?= $qt_master['qt_code'] . "_V" . $qt_versions['qvm_version_no']; ?></h5>
+                </td>
+            <?php } ?>
         </tr>
         <tr>
             <td>Customer: <b><?= $qt_master['qt_cus_name']; ?></b></td>
@@ -146,6 +153,12 @@
                     <th style="width: 20%; text-align: center;">Condition</th>
                     <th style="width: 10%; text-align: center;">Priority</th>
                     <th style="width: 15%; text-align: right;">Price</th>
+                <?php } ?>
+                <?php if ($type == 4) { ?>
+                    <th style="width: 50%; text-align: center;">Description</th>
+                    <th style="width: 15%; text-align: center;">Quantity</th>
+                    <th style="width: 15%; text-align: right;">Unit Price</th>
+                    <th style="width: 10%; text-align: right;">Net Price</th>
                 <?php } ?>
             </tr>
         </thead>
@@ -484,6 +497,44 @@
                 ?>
             </tbody>
         <?php } ?>
+        <?php if ($type == 4) { ?>
+            <tbody>
+                <?php
+                $sub_total = 0;
+                $i = 1;
+                $even = true;
+
+                foreach ($qt_group as $group_items) {
+                    $even = !$even;
+                    $j = 0;
+
+                    foreach ($group_items as $line_item) {
+                        if ($line_item['item_type'] == 1) {
+                            $sub_total += ($line_item['qtvi_qtv_item_price'] * $line_item['qtvi_qtv_item_qty']);
+                ?>
+                            <tr class="<?php echo $even ? 'even_row' : 'odd_row'; ?>">
+                                <td style="width:10%;text-align:left;vertical-align: top;"><?php echo $i; ?></td> <!-- Print Sl. No. -->
+
+                                <td style="width:50%;text-align:left;">
+                                    <?php echo $line_item['item_name']; ?>
+                                </td>
+
+                                <td style="width:15%;"><?php echo sprintf("%.2f", $line_item['qtvi_qtv_item_qty']); ?></td>
+
+                                <td style="width:15%;text-align:right;"><?php echo sprintf("%.2f", $line_item['qtvi_qtv_item_price']); ?></td>
+
+                                <td style="width:10%;text-align:right;"><?php echo sprintf("%.2f", $line_item['qtvi_qtv_item_price'] * $line_item['qtvi_qtv_item_qty']); ?></td>
+                            </tr>
+                <?php
+                            $i++; // Increment Sl. No. for each item
+                        }
+                    }
+                }
+                ?>
+            </tbody>
+
+
+        <?php } ?>
 
         <tfoot>
             <?php if ($type == 1) { ?>
@@ -604,6 +655,20 @@
                     </td>
                 </tr>
             <?php } ?>
+            <?php if ($type == 4) { ?>
+                <tr>
+                    <td colspan="5">
+                        <hr style="border-top: 1px solid #eee;">
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="1"></td>
+                    <td colspan="3" class="text-center" style="text-align: right;">Sub Total</td>
+                    <td class="text-center" style="text-align: right;">
+                        <b><?= number_format($sub_total, 2); ?></b>
+                    </td>
+                </tr>
+            <?php } ?>
 
             <!-- <tr>
                     <td colspan="2"></td>
@@ -682,7 +747,30 @@
 
                 </tr>
             <?php } ?>
+            <?php if ($type == 4) { ?>
+                <tr>
+                    <td colspan="1"></td>
+                    <td colspan="3" class="text-center" style="text-align: right;">VAT (5%)</td>
+                    <td class="text-center" style="text-align: right;"><b><?php echo number_format((float)$sub_total * 0.05, 2, '.', '') ?></b></td>
+                </tr>
+                <tr>
+                    <td colspan="1"></td>
+                    <td colspan="3" class="text-center" style="text-align: right;"><b>Grand Total</b></td>
+                    <td class="text-center" style="text-align: right;">
+                        <h3><?php echo number_format((float)$sub_total * 1.05, 2, '.', ''); ?></h3>
+                    </td>
+                </tr>
+                <tr>
+                    <td colspan="5" style="text-align: right; text-transform: capitalize;"><strong>
+                            <?php
+                            $f = new NumberFormatter("en", NumberFormatter::SPELLOUT);
+                            echo $f->format((float)$sub_total * 1.05) . " Dirhams Only";
+                            ?>
+                        </strong></td>
 
+
+                </tr>
+            <?php } ?>
         </tfoot>
     </table>
 
@@ -700,20 +788,24 @@
             </td>
         </tr> -->
 
-        <tr>
-            <td><span class="body_master" style=" font-family: DejaVu Sans, sans-serif;margin-left: 40px;margin-right: 40px;">
-                    Notes</span></td>
-        </tr>
-        <tr>
-            <td><span class="body_master" style=" font-family: DejaVu Sans, sans-serif;font-size:12px;text-align: justify; text-justify: inter-word;">
-                    <?= $qt_versions['qvm_note']; ?>
-                </span></td>
-        </tr>
-        <tr>
-            <td style="padding-top: 5%;"><span style=" font-family: DejaVu Sans, sans-serif;font-size:12px;text-align: justify; text-justify: inter-word;">
-                    All information contained within this quote is valid only during this offer period. Thereafter, all prices are subject to change.
-                </span></td>
-        </tr>
+        <?php if ($type != 4) { ?>
+            <tr>
+                <td><span class="body_master" style=" font-family: DejaVu Sans, sans-serif;margin-left: 40px;margin-right: 40px;">
+                        Notes</span></td>
+            </tr>
+            <tr>
+                <td style="vertical-align: top;">
+                    <pre style="margin: 0; font-family: DejaVu Sans, sans-serif; font-size:12px;">
+<?= htmlspecialchars($qt_versions['qvm_note']) ?>
+    </pre>
+                </td>
+            </tr>
+            <tr>
+                <td style="padding-top: 5%;"><span style=" font-family: DejaVu Sans, sans-serif;font-size:12px;text-align: justify; text-justify: inter-word;">
+                        All information contained within this quote is valid only during this offer period. Thereafter, all prices are subject to change.
+                    </span></td>
+            </tr>
+        <?php } ?>
     </table>
     <!-- <div>
         <h6 style="text-align: center;letter-spacing: 2px;font-family: DejaVu Sans, sans-serif;">www.benzuae.com </h4>

@@ -12,6 +12,7 @@ use Config\Validation;
 use CodeIgniter\API\ResponseTrait;
 use Config\TwilioConfig;
 use App\Models\User\UserroleModel;
+use App\Models\ServicePackage\ServicePackageModelCodeModel;
 
 class Login extends ResourceController
 {
@@ -21,6 +22,7 @@ class Login extends ResourceController
     {
         $this->db = \Config\Database::connect();
     }
+
     public function user_login()
     {
         $model = new UserModel();
@@ -60,15 +62,15 @@ class Login extends ResourceController
                 //     $result = $row->verification_number;
                 //     // $otpto =$result;
                 //     $otpto = +971509766075;
-                //     $jwtres = $common->generate_user_jwt_token($res['us_id']);
-                //     // $jwtres = $common->generate_user_jwt_token($res['us_id']);
+
+                //     log_message('error', json_encode($jwtres));
+                //     //$jwtres = $common->generate_user_jwt_token($res['us_id']);  
                 // }
 
 
 
 
 
-                // $token = $jwtres['token'];
                 // if( $jwtres['iat'] < $res['last_login'] || $res['last_login'] =='')
                 // {
                 //     echo "iat".$jwtres['iat']; echo "\n";
@@ -97,8 +99,8 @@ class Login extends ResourceController
                         $re = true;
                     }
                     $re = true; /// only for local
-                    log_message('error',  "re 98 >>>>" . json_encode($re));
-                    log_message('error',  "res 99 >>>>" . json_encode($res));
+                    // log_message('error',  "re 98 >>>>" . json_encode($re));
+                    // log_message('error',  "res 99 >>>>" . json_encode($res));
 
                     if (!$re) {
                         if ($res['tr_grp_status'] == '1') {
@@ -152,17 +154,26 @@ class Login extends ResourceController
                             $data['verify'] = 'false';
                             $data['us_phone'] = $res['us_phone'];
 
-                            $indata = [
-                                'login_status'    => 1,
-                                'activeJwt'   =>  $token,
-                                'last_login' => $jwtres['iat'],
-                                'FCM_token'  =>  $this->request->getVar('fcm')
-                            ];
+                            if ($this->request->getVar('login') == 0) { //0- logged in from mobile, 1 from web browser
+                                $indata = [
+                                    'login_status'    => 1,
+                                    'activeJwt'   =>  $token,
+                                    'last_login' => $jwtres['iat'],
+                                    'us_fcm_token_mob'  =>  $this->request->getVar('fcm_token')
+                                ];
+                            } else {
+                                $indata = [
+                                    'login_status'    => 1,
+                                    'activeJwt'   =>  $token,
+                                    'last_login' => $jwtres['iat'],
+                                    'us_fcm_token_web'  =>  $this->request->getVar('fcm_token')
+                                ];
+                            }
+
 
                             $results = $model->update($res['us_id'], $indata);
-
-
                             $this->insertUserLog('Login', $res['us_id']);
+                            // log_message('error',  "$jwtres");
                             return $this->respond($data, 200);
                         } else {
                             $data['ret_data'] = "fail";
@@ -200,12 +211,27 @@ class Login extends ResourceController
                         $data['ret_data'] = "success";
                         $data['verify'] = 'true';
 
-                        $indata = [
-                            'login_status'    => 1,
-                            'activeJwt'   =>  $token,
-                            'last_login' => $jwtres['iat'],
-                            'FCM_token'  =>  $this->request->getVar('fcm')
-                        ];
+                        if ($this->request->getVar('login') == 0) { //0- logged in from mobile, 1 from web browser
+                            $indata = [
+                                'login_status'    => 1,
+                                'activeJwt'   =>  $token,
+                                'last_login' => $jwtres['iat'],
+                                'us_fcm_token_mob'  =>  $this->request->getVar('fcm_token')
+                            ];
+                        } else {
+                            $indata = [
+                                'login_status'    => 1,
+                                'activeJwt'   =>  $token,
+                                'last_login' => $jwtres['iat'],
+                                'us_fcm_token_web'  =>  $this->request->getVar('fcm_token')
+                            ];
+                        }
+                        // $indata = [
+                        //     'login_status'    => 1,
+                        //     'activeJwt'   =>  $token,
+                        //     'last_login' => $jwtres['iat'],
+                        //     'FCM_token'  =>  $this->request->getVar('fcm_token')
+                        // ];
 
                         $results = $model->update($res['us_id'], $indata);
                         $this->insertUserLog('Login', $res['us_id']);
@@ -253,6 +279,224 @@ class Login extends ResourceController
             }
         }
     }
+    // public function user_login()
+    // {
+    //     $model = new UserModel();
+    //     $IPmodel = new PermittedIPModel();
+    //     $logmodel = new UserActivityLog();
+    //     $userroleModel = new UserroleModel();
+    //     $common = new Common();
+    //     $rules = [
+    //         'email' => 'required',
+    //         'password' => 'required',
+    //     ];
+    //     if (!$this->validate($rules)) return $this->fail($this->validator->getErrors());
+    //     $res = $model->where('us_email', $this->request->getVar('email'))->first();
+    //     if (!$res) {
+    //         $response = [
+    //             'ret_data' => 'fail',
+    //         ];
+    //         return $this->respond($response, 200);
+    //     } else {
+    //         $encrypter = \Config\Services::encrypter();
+    //         $builder = $this->db->table('system_datas');
+    //         $builder->select('encryption_key');
+    //         $query = $builder->get();
+    //         $keydata = $query->getRow();
+    //         $org_pass = $encrypter->decrypt(base64_decode($keydata->encryption_key));
+    //         $aeskey = $common->aes_encryption($org_pass, $this->request->getVar('password'));
+    //         $verify = strcmp(base64_encode($aeskey), $res['us_password']);
+    //         // $verify=strcmp($org_pass,$this->request->getVar('userpassword'));
+    //         if ($verify == 0) {
+    //             if ($res['tr_grp_status'] == 1) {
+    //                 $otpto = $res['us_phone'];
+    //                 $jwtres = $common->generate_user_jwt_token($res['us_id']);
+    //             } else {
+    //                 $builder = $this->db->table('common_settings');
+    //                 $query = $builder->get();
+    //                 $row = $query->getRow();
+    //                 $result = $row->verification_number;
+    //                 // $otpto =$result;
+    //                 $otpto = +971509766075;
+    //                 $jwtres = $common->generate_user_jwt_token($res['us_id']);
+    //                 // $jwtres = $common->generate_user_jwt_token($res['us_id']);
+    //             }
+
+
+
+
+
+    //             $token = $jwtres['token'];
+    //             // if( $jwtres['iat'] < $res['last_login'] || $res['last_login'] =='')
+    //             // {
+    //             //     echo "iat".$jwtres['iat']; echo "\n";
+    //             //     echo "last".$res['last_login'];echo "\n";
+    //             //     echo "LOGIN NOW";
+    //             // }  
+    //             // else
+    //             // {
+    //             //     echo "iat".$jwtres['iat']; echo "\n";
+    //             //     echo "last".$res['last_login'];echo "\n";
+    //             //     echo "ALREADY LOGIN";
+    //             // }    
+
+    //             $twilioConfig = new TwilioConfig();
+    //             $ip = $this->request->getIPAddress();
+
+    //             // $ip='192.168.2.180';
+
+    //             if (!filter_var($ip, FILTER_VALIDATE_IP)) {
+    //                 $data['ret_data'] = "fail";
+    //                 return $this->respond($data);
+    //             } else {
+
+    //                 $re = $IPmodel->where('pip_address', $ip)->where('pip_delete_flag', 0)->select('pip_address,pip_id')->first();
+    //                 $re = true;
+    //                 if (!$re) {
+    //                     if ($res['tr_grp_status'] == 1) {
+    //                         $otpto = $res['us_phone'];
+    //                     } else {
+    //                         $builder = $this->db->table('verification_number');
+    //                         $builder->where('vn_delete_flag', 0);
+    //                         $query = $builder->get();
+    //                         $row = $query->getRow();
+    //                         $result = $row->vn_number;
+    //                         $otpto = $result;
+    //                         //$otpto = +9710509766075;
+    //                     }
+    //                     //   $result=$twilioConfig->sendVerificationCode($otpto,"sms");
+    //                     $result = 'pending';
+    //                     if ($result == 'pending') {
+    //                         $role_grp = $userroleModel->select('role_groupid')->where('role_id', $res['us_role_id'])->first();
+    //                         $userdata = array(
+    //                             "us_id" => $res['us_id'],
+    //                             "us_firstname" => $res['us_firstname'],
+    //                             "us_lastname" => $res['us_lastname'],
+    //                             "us_email" => $res['us_email'],
+    //                             "us_phone" => $res['us_phone'],
+    //                             "us_role_id" => $res['us_role_id'],
+    //                             "us_date_of_joining" => $res['us_date_of_joining'],
+    //                             "us_status_flag" => $res['us_status_flag'],
+    //                             "ext_number" => $res['ext_number'],
+    //                             "us_token" => $token,
+    //                             "us_ext_name" => $res['us_ext_name'],
+    //                             "us_laabs_id" => $res['us_laabs_id'],
+    //                             "us_role_grp" => $role_grp['role_groupid']
+    //                         );
+    //                         $data['user_details'] = $userdata;
+    //                         $builder = $this->db->table('feature_role_mapping');
+    //                         $builder->select('features_list.ft_id,features_list.ft_name,feature_actions.fa_id,feature_actions.fa_name');
+    //                         $builder->where('frm_role_id', $res['us_role_id']);
+    //                         $builder->join('user_roles', 'user_roles.role_id = feature_role_mapping.frm_role_id', 'INNER JOIN');
+    //                         $builder->join('features_list', 'features_list.ft_id =feature_role_mapping.frm_feature_id', 'INNER JOIN');
+    //                         $builder->join('feature_actions', 'feature_actions.fa_id=feature_role_mapping.frm_action_id', 'INNER JOIN');
+    //                         $query = $builder->get();
+    //                         $features = $query->getResultArray();
+
+    //                         $data['access'] = $features;
+    //                         $data['ret_data'] = "success";
+    //                         $data['verify'] = 'false';
+
+    //                         $indata = [
+    //                             'login_status'    => 1,
+    //                             'activeJwt'   =>  $token,
+    //                             'last_login' => $jwtres['iat'],
+    //                             'FCM_token'  =>  $this->request->getVar('fcm')
+    //                         ];
+
+    //                         $results = $model->update($res['us_id'], $indata);
+
+
+    //                         $this->insertUserLog('Login', $res['us_id']);
+    //                         return $this->respond($data, 200);
+    //                     } else {
+    //                         $data['ret_data'] = "fail";
+    //                         return $this->respond($data);
+    //                     }
+    //                 } else {
+
+    //                     $role_grp = $userroleModel->select('role_groupid')->where('role_id', $res['us_role_id'])->first();
+    //                     $userdata = array(
+    //                         "us_id" => $res['us_id'],
+    //                         "us_firstname" => $res['us_firstname'],
+    //                         "us_lastname" => $res['us_lastname'],
+    //                         "us_email" => $res['us_email'],
+    //                         "us_phone" => $res['us_phone'],
+    //                         "us_role_id" => $res['us_role_id'],
+    //                         "us_date_of_joining" => $res['us_date_of_joining'],
+    //                         "us_status_flag" => $res['us_status_flag'],
+    //                         "ext_number" => $res['ext_number'],
+    //                         "us_token" => $token,
+    //                         "us_ext_name" => $res['us_ext_name'],
+    //                         "us_laabs_id" => $res['us_laabs_id'],
+    //                         "us_role_grp" => $role_grp['role_groupid']
+    //                     );
+    //                     $data['user_details'] = $userdata;
+    //                     $builder = $this->db->table('feature_role_mapping');
+    //                     $builder->select('features_list.ft_id,features_list.ft_name,feature_actions.fa_id,feature_actions.fa_name');
+    //                     $builder->where('frm_role_id', $res['us_role_id']);
+    //                     $builder->join('user_roles', 'user_roles.role_id = feature_role_mapping.frm_role_id', 'INNER JOIN');
+    //                     $builder->join('features_list', 'features_list.ft_id =feature_role_mapping.frm_feature_id', 'INNER JOIN');
+    //                     $builder->join('feature_actions', 'feature_actions.fa_id=feature_role_mapping.frm_action_id', 'INNER JOIN');
+    //                     $query = $builder->get();
+    //                     $features = $query->getResultArray();
+    //                     $data['access'] = $features;
+    //                     $data['ret_data'] = "success";
+    //                     $data['verify'] = 'true';
+
+    //                     $indata = [
+    //                         'login_status'    => 1,
+    //                         'activeJwt'   =>  $token,
+    //                         'last_login' => $jwtres['iat'],
+    //                         'FCM_token'  =>  $this->request->getVar('fcm')
+    //                     ];
+
+    //                     $results = $model->update($res['us_id'], $indata);
+    //                     $this->insertUserLog('Login', $res['us_id']);
+    //                     return $this->respond($data, 200);
+    //                 }
+    //             }
+    //             // $result='pending';
+    //             // if($result=='pending'){
+    //             //     $token=$common->generate_user_jwt_token($res['us_id']);
+    //             //     $userdata=array(
+    //             //         "us_id"=> $res['us_id'],
+    //             //         "us_firstname"=>$res['us_firstname'],
+    //             //         "us_lastname"=> $res['us_lastname'],
+    //             //         "us_email"=> $res['us_email'],
+    //             //         "us_phone"=> $res['us_phone'],
+    //             //         "us_role_id"=> $res['us_role_id'],
+    //             //         "us_date_of_joining"=> $res['us_date_of_joining'],
+    //             //         "us_status_flag"=> $res['us_status_flag'],
+    //             //         "ext_number"=> $res['ext_number'],
+    //             //         "us_token"=> $token,
+    //             //     );
+    //             //     $data['user_details']=$userdata;
+    //             //     $builder = $this->db->table('feature_role_mapping');
+    //             //     $builder->select('features_list.ft_id,features_list.ft_name,feature_actions.fa_id,feature_actions.fa_name');
+    //             //     $builder->where('frm_role_id', $res['us_role_id']);
+    //             //     $builder->join('user_roles', 'user_roles.role_id = feature_role_mapping.frm_role_id', 'INNER JOIN');
+    //             //     $builder->join('features_list', 'features_list.ft_id =feature_role_mapping.frm_feature_id', 'INNER JOIN');
+    //             //     $builder->join('feature_actions', 'feature_actions.fa_id=feature_role_mapping.frm_action_id', 'INNER JOIN');
+    //             //     $query = $builder->get();
+    //             //     $features = $query->getResultArray();
+    //             //     $data['access']=$features;
+    //             //     $data['ret_data']="success";      
+    //             //     $response = [
+    //             //         'ret_data'=>'success',
+    //             //         'user_details'=>$res
+    //             //     ];
+    //             //     return $this->respond($data,200);
+    //             // }else{
+    //             //     $data['ret_data']="fail";
+    //             // }
+
+    //         } else {
+    //             $data['ret_data'] = "fail";
+    //             return $this->respond($data);
+    //         }
+    //     }
+    // }
     public function verifyOTP()
     {
         $rules = [
@@ -285,5 +529,83 @@ class Login extends ResourceController
             'log_activity' => $log
         ];
         $results = $logmodel->insert($indata);
+    }
+
+
+    public function logout()
+    {
+        $usermodel = new UserModel();
+        $userid = $this->request->getVar('user_id');
+        if (!$userid) {
+            return $this->response->setJSON([
+                'status' => 'error',
+                'message' => 'User ID is required.'
+            ])->setStatusCode(400);
+        }
+
+        try {
+            // Update the login_status for the specified user_id
+            $updated = $usermodel->update($userid, ['login_status' => 0]);
+
+            if ($updated) {
+                return $this->response->setJSON([
+                    'status' => 'success',
+                    'message' => 'User logged out successfully.'
+                ])->setStatusCode(200);
+            } else {
+                return $this->response->setJSON([
+                    'status' => 'error',
+                    'message' => 'Failed to log out user. User ID might not exist.'
+                ])->setStatusCode(500);
+            }
+        } catch (\Exception $e) {
+            // Handle exceptions
+            return $this->response->setJSON([
+                'status' => 'error',
+                'message' => 'An error occurred: ' . $e->getMessage()
+            ])->setStatusCode(500);
+        }
+    }
+
+    public function removeSpmcLock()
+    {
+
+        $spmcModel = new ServicePackageModelCodeModel();
+        $userid = $this->request->getVar('user_id');
+
+
+        if (!$userid) {
+            return $this->response->setJSON([
+                'status' => 'error',
+                'message' => 'User ID is required.'
+            ])->setStatusCode(400);
+        }
+
+        try {
+            $affectedRows = $spmcModel
+                ->where('spmc_session_us_id', $userid)
+                ->set(['spmc_session_flag' => 0])
+                ->update();
+
+
+
+            if ($affectedRows > 0) {
+                return $this->response->setJSON([
+                    'status'  => 'success',
+                    'updated' => true,
+                ]);
+            } else {
+                return $this->response->setJSON([
+                    'status'  => 'success',
+                    'updated' => true,
+                    'message' => 'No record found for this user_id'
+                ]);
+            }
+        } catch (\Exception $e) {
+            return $this->response->setJSON([
+                'status'  => 'error',
+                'message' => $e->getMessage()
+            ])->setStatusCode(500);
+        }
     }
 }

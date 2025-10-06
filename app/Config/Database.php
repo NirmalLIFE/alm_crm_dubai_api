@@ -73,7 +73,7 @@ class Database extends Config
         'port'     => 3306,
     ];
 
-   
+
     /**
      * This database connection is used when
      * running PHPUnit database tests.
@@ -110,7 +110,5 @@ class Database extends Config
         if (ENVIRONMENT === 'testing') {
             $this->defaultGroup = 'tests';
         }
-
-        
     }
 }

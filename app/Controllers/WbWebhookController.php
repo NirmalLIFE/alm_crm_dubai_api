@@ -131,7 +131,6 @@ class WbWebhookController extends ResourceController
         }
 
         if (sizeof($status) > 0) {
-            log_message('error', "I am here");
             $save_status = 0;
             $save_response = 0;
             if ($status['status'] == "failed") {

@@ -18,6 +18,7 @@ use App\Models\ServicePackage\EngineMasterModel;
 
 
 
+
 class ServiceController extends ResourceController
 {
 
@@ -33,9 +34,8 @@ class ServiceController extends ResourceController
      */
     public function index()
     {
-        $VehicleMaster = new VehicleMaster();
         $EngineMasterModel = new EngineMasterModel();
-
+        $VehicleMaster = new VehicleMaster();
         $common = new Common();
         $valid = new Validation();
         $heddata = $this->request->headers();
@@ -59,7 +59,7 @@ class ServiceController extends ResourceController
             //     ->distinct()
             //     ->select('veh_enginemaster')
             //     ->findAll();
-
+            
             $engineNo = $EngineMasterModel->where("eng_delete_flag", 0)
                 ->select('eng_id,eng_no,eng_labour_factor')
                 ->findAll();

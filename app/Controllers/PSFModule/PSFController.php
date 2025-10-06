@@ -710,19 +710,21 @@ class PSFController extends ResourceController
         if ($tokendata['aud'] != "") {
 
             $builder = $this->db->table('sequence_data');
-            $builder->select('psf_feedback_assign_days');
+            $builder->select('psf_feedback_assign_days_after_sa');
             $query = $builder->get();
             $row = $query->getRow();
-            $daysToSubtract = $row->psf_feedback_assign_days;
+            $daysToSubtract = $row->psf_feedback_assign_days_after_sa;
             $today = strtoupper(date('d-M-y', strtotime("-$daysToSubtract day")));
             // $today = strtoupper(date('d-M-y', strtotime("-3 day")));
             $laabs_job = new MaraghiJobcardModel();
             $psf_tracker = new PSFstatusTrackModel();
             $laabs_psf = $laabs_job->select('job_no,customer_no,vehicle_id,car_reg_no,invoice_date,sa_emp_id,job_status,phone,lang_pref')
                 ->join('cust_data_laabs', 'cust_data_laabs.customer_code=customer_no')
-                ->where('job_status', 'INV')->where('invoice_date', $today)->orderBy('job_no', 'desc')
+                ->where('job_status', 'INV')->where('feedback_flag', '0')->where('invoice_date', $today)->orderBy('job_no', 'desc')
                 ->groupBy('vehicle_id,customer_no')
                 ->findAll();
+
+
             if (sizeof($laabs_psf) > 0) {
                 $builder = $this->db->table('sequence_data');
                 $builder->select('psf_assign_type');
@@ -731,16 +733,18 @@ class PSFController extends ResourceController
                 if ($row->psf_assign_type == 1) {
                     $psfStaff = new PSFAssignedStaffModel();
                     $assigned_staff = $psfStaff->select('psfs_id,psfs_assigned_staff,psfs_psf_type')
-                        ->where('psfs_delete_flag', 0)->where('psfs_psf_type', 0)->findAll();
+                        ->where('psfs_delete_flag', 0)->where('psfs_psf_type', 1)->findAll(); // to get secondary assign psf
                     $split_data = array_chunk($laabs_psf, ceil(count($laabs_psf) / sizeof($assigned_staff)));
                     $staff_index = 0;
                     foreach ($split_data as $values) {
                         foreach ($values as $psf_item) {
-                            $startDate = strtotime($psf_item['invoice_date']) - (60 * 60 * 24 * 20);
+                            $startDate = strtotime($psf_item['invoice_date']) - (60 * 60 * 24 * 20);  // 20 days
                             $laabs_psf_dupe = $laabs_job
                                 ->where('vehicle_id', $psf_item['vehicle_id'])->where("STR_TO_DATE(job_open_date, '%d-%b-%y')>",  date('Y-m-d', $startDate))
                                 ->where('job_status', 'INV')
                                 ->countAllResults();
+
+
 
                             if ($laabs_psf_dupe == 1) {
                                 $messageData = $psf_item['lang_pref'] == 'AR' ? array(
@@ -812,22 +816,27 @@ class PSFController extends ResourceController
                                     'psfm_reg_no' => $psf_item['car_reg_no'],
                                     'psfm_invoice_date' => $psf_item['invoice_date'],
                                     'psfm_sa_id' => $psf_item['sa_emp_id'],
-                                    'psfm_psf_assign_date' => date('Y-m-d'),
+                                    // 'psfm_psf_assign_date' => date('Y-m-d'),
                                     // 'psfm_psf_assign_date' =>'2023-04-25',
-                                    'psfm_primary_assignee' => $assigned_staff[$staff_index]['psfs_assigned_staff'],
+                                    // 'psfm_primary_assignee' => $assigned_staff[$staff_index]['psfs_assigned_staff'],
                                     'psfm_current_assignee' => $assigned_staff[$staff_index]['psfs_assigned_staff'],
                                     'psfm_created_by' => $user['us_id'],
                                     'psfm_updated_by' => $user['us_id'],
                                     'psfm_primary_whatsapp_id' => $wb_id,
                                     'psfm_created_on' => date("Y-m-d H:i:s"),
                                     'psfm_updated_on' => date("Y-m-d H:i:s"),
+                                    'psfm_cre_assign_date' => date('Y-m-d'),
+                                    'psfm_cre_id' => $assigned_staff[$staff_index]['psfs_assigned_staff'],
+                                    'psfm_status' => 2,
+                                    'psfm_assign_flag' => 2,
+
                                 ];
                                 $psf_master = new PSFMasterModel();
                                 $insert_id = $psf_master->insert($psfMasterInsert);
                                 $tracker_data = [
-                                    'pst_task' => 'PSF Customer assigned to Staff',
-                                    'pst_psf_status' => 0,
-                                    'pst_psf_call_type' => 0,
+                                    'pst_task' => 'PSF Customer assigned to CRE',
+                                    'pst_psf_status' => 2,
+                                    'pst_psf_call_type' => 2,
                                     'pst_sourceid' => $assigned_staff[$staff_index]['psfs_assigned_staff'],
                                     'pst_destid' => $assigned_staff[$staff_index]['psfs_assigned_staff'],
                                     'pst_psf_id' => $insert_id,
@@ -856,23 +865,28 @@ class PSFController extends ResourceController
                                 'psfm_vehicle_no' => $value['vehicle_id'],
                                 'psfm_reg_no' => $value['car_reg_no'],
                                 'psfm_invoice_date' => $value['invoice_date'],
-                                'psfm_sa_id' => $value['sa_emp_id'],
-                                'psfm_psf_assign_date' => date('Y-m-d'),
+                                // 'psfm_sa_id' => $value['sa_emp_id'],
+                                // 'psfm_psf_assign_date' => date('Y-m-d'),
                                 // 'psfm_psf_assign_date' =>'2023-04-25',
-                                'psfm_primary_assignee' => $psf_user['us_id'],
-                                'psfm_current_assignee' => $psf_user['us_id'],
+                                //'psfm_primary_assignee' => $psf_user['us_id'],
+                                'psfm_current_assignee' => 19,
                                 'psfm_created_by' => $user['us_id'],
                                 'psfm_updated_by' => $user['us_id'],
                                 'psfm_created_on' => date("Y-m-d H:i:s"),
                                 'psfm_updated_on' => date("Y-m-d H:i:s"),
+                                'psfm_cre_assign_date' => date('Y-m-d'),
+                                'psfm_cre_id' => 19,
+                                'psfm_status' => 2,
+                                'psfm_assign_flag' => 2,
+
                             ];
                             $psf_master = new PSFMasterModel();
                             $insert_id = $psf_master->insert($psfMasterInsert);
                             $tracker_data = [
-                                'pst_task' => 'PSF Customer assigned to SA',
-                                'pst_psf_status' => 0,
-                                'pst_sourceid' => $psf_user['us_id'],
-                                'pst_destid' => $psf_user['us_id'],
+                                'pst_task' => 'PSF Customer assigned to CRE',
+                                'pst_psf_status' => 2,
+                                'pst_sourceid' => 19,
+                                'pst_destid' => 19,
                                 'pst_psf_id' => $insert_id,
                                 'pst_created_by' => 0,
                                 'pst_created_on' => date("Y-m-d H:i:s"),
@@ -899,6 +913,222 @@ class PSFController extends ResourceController
             return $this->respond($response, 200);
         }
     }
+
+
+    // old working is below new is above only for secondary psf
+
+    // public function crmDailyPSFUpdate()
+    // {
+    //     $common = new Common();
+    //     $valid = new Validation();
+    //     $heddata = $this->request->headers();
+    //     $tokendata = $common->decode_jwt_token($valid->getbearertoken($heddata['Authorization']));
+    //     if ($tokendata['aud'] == 'superadmin') {
+    //         $SuperModel = new SuperAdminModel();
+    //         $super = $SuperModel->where("s_adm_id", $tokendata['uid'])->first();
+    //         $usmodel = new UserModel();
+    //         $user = $usmodel->where("us_id", "1")->first();
+    //         if (!$super) return $this->fail("invalid user", 400);
+    //     } else if ($tokendata['aud'] == 'user') {
+    //         $usmodel = new UserModel();
+    //         $user = $usmodel->where("us_id", $tokendata['uid'])->first();
+    //         if (!$user) return $this->fail("invalid user", 400);
+    //     } else {
+    //         $data['ret_data'] = "Invalid user";
+    //         return $this->fail($data, 400);
+    //     }
+    //     if ($tokendata['aud'] != "") {
+
+    //         $builder = $this->db->table('sequence_data');
+    //         $builder->select('psf_feedback_assign_days');
+    //         $query = $builder->get();
+    //         $row = $query->getRow();
+    //         $daysToSubtract = $row->psf_feedback_assign_days;
+    //         $today = strtoupper(date('d-M-y', strtotime("-$daysToSubtract day")));
+    //         // $today = strtoupper(date('d-M-y', strtotime("-3 day")));
+    //         $laabs_job = new MaraghiJobcardModel();
+    //         $psf_tracker = new PSFstatusTrackModel();
+    //         $laabs_psf = $laabs_job->select('job_no,customer_no,vehicle_id,car_reg_no,invoice_date,sa_emp_id,job_status,phone,lang_pref')
+    //             ->join('cust_data_laabs', 'cust_data_laabs.customer_code=customer_no')
+    //             ->where('job_status', 'INV')->where('feedback_flag', '0')->where('invoice_date', $today)->orderBy('job_no', 'desc')
+    //             ->groupBy('vehicle_id,customer_no')
+    //             ->findAll();
+    //         if (sizeof($laabs_psf) > 0) {
+    //             $builder = $this->db->table('sequence_data');
+    //             $builder->select('psf_assign_type');
+    //             $query = $builder->get();
+    //             $row = $query->getRow();
+    //             if ($row->psf_assign_type == 1) {
+    //                 $psfStaff = new PSFAssignedStaffModel();
+    //                 $assigned_staff = $psfStaff->select('psfs_id,psfs_assigned_staff,psfs_psf_type')
+    //                     ->where('psfs_delete_flag', 0)->where('psfs_psf_type', 0)->findAll();
+    //                 $split_data = array_chunk($laabs_psf, ceil(count($laabs_psf) / sizeof($assigned_staff)));
+    //                 $staff_index = 0;
+    //                 foreach ($split_data as $values) {
+    //                     foreach ($values as $psf_item) {
+    //                         $startDate = strtotime($psf_item['invoice_date']) - (60 * 60 * 24 * 20);
+    //                         $laabs_psf_dupe = $laabs_job
+    //                             ->where('vehicle_id', $psf_item['vehicle_id'])->where("STR_TO_DATE(job_open_date, '%d-%b-%y')>",  date('Y-m-d', $startDate))
+    //                             ->where('job_status', 'INV')
+    //                             ->countAllResults();
+
+    //                         if ($laabs_psf_dupe == 1) {
+    //                             $messageData = $psf_item['lang_pref'] == 'AR' ? array(
+    //                                 "messaging_product" => "whatsapp",
+    //                                 "recipient_type" => "individual",
+    //                                 "to" => "971" . substr($psf_item['phone'], -9),
+    //                                 "type" => "template",
+    //                                 'template' => array("name" => "service_feedback_arabic", 'language' => array("code" => "ar"), 'components' =>
+    //                                 array(
+    //                                     // array(
+    //                                     //     "type" => "header",
+    //                                     //     "parameters" => array(
+    //                                     //         array("type" => "image", "image" => array("link" => "https://benzuae.ae/feedback.jpg"))
+    //                                     //     )
+    //                                     // ),
+    //                                     array(
+    //                                         "type" => "body"
+    //                                     )
+    //                                 ))
+    //                             ) : array(
+    //                                 "messaging_product" => "whatsapp",
+    //                                 "recipient_type" => "individual",
+    //                                 "to" => "971" . substr($psf_item['phone'], -9),
+    //                                 "type" => "template",
+    //                                 'template' => array("name" => "service_feedback_third_day", 'language' => array("code" => "en"), 'components' =>
+    //                                 array(
+    //                                     // array(
+    //                                     //     "type" => "header",
+    //                                     //     "parameters" => array(
+    //                                     //         array("type" => "image", "image" => array("link" => "https://benzuae.ae/feedback.jpg"))
+    //                                     //     )
+    //                                     // ),
+    //                                     array(
+    //                                         "type" => "body"
+    //                                     )
+    //                                 ))
+    //                             );
+    //                             $return = $common->sendWhatsappMessage($messageData, '971509766075');
+    //                             $wb_id = 0;
+    //                             if (isset($return->messages)) {
+    //                                 $wb_model = new WhatsappMessageModel();
+    //                                 if ($return->messages[0]->message_status == "accepted") {
+    //                                     $wb_data = [
+    //                                         'wb_message_id' => $return->messages[0]->id,
+    //                                         'wb_message_source' => 1,
+    //                                         'wb_customer_id' => $psf_item['customer_no'],
+    //                                         'wb_message_status' => 1,
+    //                                         'wb_phone' => "971" . substr($psf_item['phone'], -9),
+    //                                         'wb_created_on' => date("Y-m-d H:i:s"),
+    //                                         'wb_updated_on' => date("Y-m-d H:i:s")
+    //                                     ];
+    //                                 } else {
+    //                                     $wb_data = [
+    //                                         'wb_message_id' => $return->messages[0]->id,
+    //                                         'wb_message_source' => 1,
+    //                                         'wb_customer_id' => $psf_item['customer_no'],
+    //                                         'wb_message_status' => 0,
+    //                                         'wb_phone' => "971" . substr($psf_item['phone'], -9),
+    //                                         'wb_created_on' => date("Y-m-d H:i:s"),
+    //                                         'wb_updated_on' => date("Y-m-d H:i:s")
+    //                                     ];
+    //                                 }
+    //                                 $wb_id = $wb_model->insert($wb_data);
+    //                             }
+    //                             $psfMasterInsert = [
+    //                                 'psfm_customer_code' => $psf_item['customer_no'],
+    //                                 'psfm_job_no' => $psf_item['job_no'],
+    //                                 'psfm_vehicle_no' => $psf_item['vehicle_id'],
+    //                                 'psfm_reg_no' => $psf_item['car_reg_no'],
+    //                                 'psfm_invoice_date' => $psf_item['invoice_date'],
+    //                                 'psfm_sa_id' => $psf_item['sa_emp_id'],
+    //                                 'psfm_psf_assign_date' => date('Y-m-d'),
+    //                                 // 'psfm_psf_assign_date' =>'2023-04-25',
+    //                                 'psfm_primary_assignee' => $assigned_staff[$staff_index]['psfs_assigned_staff'],
+    //                                 'psfm_current_assignee' => $assigned_staff[$staff_index]['psfs_assigned_staff'],
+    //                                 'psfm_created_by' => $user['us_id'],
+    //                                 'psfm_updated_by' => $user['us_id'],
+    //                                 'psfm_primary_whatsapp_id' => $wb_id,
+    //                                 'psfm_created_on' => date("Y-m-d H:i:s"),
+    //                                 'psfm_updated_on' => date("Y-m-d H:i:s"),
+    //                             ];
+    //                             $psf_master = new PSFMasterModel();
+    //                             $insert_id = $psf_master->insert($psfMasterInsert);
+    //                             $tracker_data = [
+    //                                 'pst_task' => 'PSF Customer assigned to Staff',
+    //                                 'pst_psf_status' => 0,
+    //                                 'pst_psf_call_type' => 0,
+    //                                 'pst_sourceid' => $assigned_staff[$staff_index]['psfs_assigned_staff'],
+    //                                 'pst_destid' => $assigned_staff[$staff_index]['psfs_assigned_staff'],
+    //                                 'pst_psf_id' => $insert_id,
+    //                                 'pst_created_by' => 0,
+    //                                 'pst_created_on' => date("Y-m-d H:i:s"),
+    //                             ];
+    //                             $tracker = $psf_tracker->insert($tracker_data);
+    //                         } else {
+    //                             $insert_id = 0;
+    //                         }
+    //                     }
+    //                     $staff_index++;
+    //                 }
+    //                 $response["ret_data"] = $laabs_psf;
+    //             } else {
+    //                 foreach ($laabs_psf as $value) {
+    //                     $laabs_psf_dupe = $laabs_job
+    //                         ->where('vehicle_id', $value['vehicle_id'])->where('DATE(job_open_date)>',  date('Y-m-d', strtotime($value['invoice_date'])))
+    //                         ->countAllResults();
+    //                     date('y-m-d', strtotime('-30 days'));
+    //                     if ($laabs_psf_dupe == 0) {
+    //                         $psf_user = $usmodel->where("us_laabs_id",  $value['sa_emp_id'])->first();
+    //                         $psfMasterInsert = [
+    //                             'psfm_customer_code' => $value['customer_no'],
+    //                             'psfm_job_no' => $value['job_no'],
+    //                             'psfm_vehicle_no' => $value['vehicle_id'],
+    //                             'psfm_reg_no' => $value['car_reg_no'],
+    //                             'psfm_invoice_date' => $value['invoice_date'],
+    //                             'psfm_sa_id' => $value['sa_emp_id'],
+    //                             'psfm_psf_assign_date' => date('Y-m-d'),
+    //                             // 'psfm_psf_assign_date' =>'2023-04-25',
+    //                             'psfm_primary_assignee' => $psf_user['us_id'],
+    //                             'psfm_current_assignee' => $psf_user['us_id'],
+    //                             'psfm_created_by' => $user['us_id'],
+    //                             'psfm_updated_by' => $user['us_id'],
+    //                             'psfm_created_on' => date("Y-m-d H:i:s"),
+    //                             'psfm_updated_on' => date("Y-m-d H:i:s"),
+    //                         ];
+    //                         $psf_master = new PSFMasterModel();
+    //                         $insert_id = $psf_master->insert($psfMasterInsert);
+    //                         $tracker_data = [
+    //                             'pst_task' => 'PSF Customer assigned to SA',
+    //                             'pst_psf_status' => 0,
+    //                             'pst_sourceid' => $psf_user['us_id'],
+    //                             'pst_destid' => $psf_user['us_id'],
+    //                             'pst_psf_id' => $insert_id,
+    //                             'pst_created_by' => 0,
+    //                             'pst_created_on' => date("Y-m-d H:i:s"),
+    //                         ];
+    //                         $tracker = $psf_tracker->insert($tracker_data);
+    //                     } else {
+    //                         $insert_id = 0;
+    //                     }
+    //                 }
+    //             }
+    //             if ($insert_id > 0) {
+    //                 $response["ret_data"] = "success";
+    //                 return $this->respond($response, 200);
+    //             } else {
+    //                 $response["ret_data"] = "fail";
+    //                 return $this->respond($response, 200);
+    //             }
+    //         } else {
+    //             $response["ret_data"] = "No data";
+    //             return $this->respond($response, 200);
+    //         }
+    //     } else {
+    //         $response["ret_data"] = "fail";
+    //         return $this->respond($response, 200);
+    //     }
+    // }
 
     public function crmDailyPSFRoutineUpdate()
     {
@@ -1044,6 +1274,7 @@ class PSFController extends ResourceController
             $month = date('m', strtotime($date));
             $year = date('Y', strtotime($date));
             //$row->psf_allowed_days
+
 
             $user_psf = $psf_master->select('cust_data_laabs.customer_name,cust_data_laabs.phone,psfm_id,psfm_job_no,psfm_reg_no,psfm_invoice_date,psfm_psf_assign_date,psfm_status,psfm_num_of_attempts,psfm_sa_rating,psfm_cre_rating,rm_id,rm_name')
                 ->where('psfm_current_assignee', $user['us_id'])
@@ -1201,7 +1432,7 @@ class PSFController extends ResourceController
             $psf_historyModel = new PSFCallHistoryModel();
             $psf_master = new PSFMasterModel();
             $maraghijobmodel = new MaraghiJobcardModel();
-            $psf_data = $psf_master->select("CONCAT(cust_data_laabs.customer_title,' ',cust_data_laabs.customer_name) as cus_name,cust_data_laabs.phone,cust_data_laabs.contact_phone,psfm_id,psfm_vehicle_no,psfm_job_no,psfm_reg_no,psfm_invoice_date,psfm_psf_assign_date,psfm_status,psfm_num_of_attempts,psfm_customer_code,cust_veh_data_laabs.model_name,users.us_firstname,psfm_last_attempted_date,psfm_sa_rating")
+            $psf_data = $psf_master->select("CONCAT(cust_data_laabs.customer_title,' ',cust_data_laabs.customer_name) as cus_name,cust_data_laabs.phone,cust_data_laabs.contact_phone,psfm_id,psfm_vehicle_no,psfm_job_no,psfm_reg_no,psfm_invoice_date,psfm_psf_assign_date,psfm_status,psfm_num_of_attempts,psfm_customer_code,cust_veh_data_laabs.model_name,users.us_firstname,psfm_last_attempted_date,psfm_sa_rating,psfm_cre_rating")
                 ->where('psfm_id', $this->request->getVar('psf_id'))
                 ->where('psfm_delete_flag', 0)
                 ->join('users', 'us_laabs_id=psfm_sa_id', 'left')
@@ -1296,7 +1527,11 @@ class PSFController extends ResourceController
                     foreach ($selected_user["user_psf_calls_not_driven"] as $psf_items) {
                         $sa_calls = $psf_tracker->where('pst_psf_call_type', 0)
                             ->where("pst_psf_id", $psf_items['psfm_id'])->orderBy('pst_created_on', 'DESC')->findAll();
-                        $selected_user["user_psf_calls_not_driven"][$index]["last_call_status"] = $sa_calls[0];
+                        if (!empty($sa_calls)) {
+                            $selected_user["user_psf_calls_not_driven"][$index]["last_call_status"] = $sa_calls[0];
+                        } else {
+                            $selected_user["user_psf_calls_not_driven"][$index]["last_call_status"] = []; // or any fallback
+                        }
                         $index++;
                     }
                     array_push($org_psf_data, $selected_user);
@@ -1433,7 +1668,7 @@ class PSFController extends ResourceController
                 foreach ($selected_user["user_psf_calls"] as $psf_items) {
                     $selected_user["user_psf_calls"][$index]["psf_calls"] = $psf_tracker->where("pst_psf_id", $psf_items['psfm_id'])
                         ->where("pst_psf_id", $psf_items['psfm_id'])
-                        ->where("DATE(pst_created_on) >=", $psf_items['psfm_psf_assign_date'])
+                        ->where("DATE(pst_created_on) >=", $psf_items['psfm_cre_assign_date'])
                         ->join('psf_response_master', 'rm_id=pst_response', 'left')
                         ->orderBy('pst_created_on', 'DESC')->findAll();
                     $index++;
@@ -1691,8 +1926,14 @@ class PSFController extends ResourceController
                     foreach ($selected_user["user_psf_callsSA"] as $psf_items) {
                         $sa_calls = $psf_tracker->where('pst_psf_call_type', 0)
                             ->where("pst_psf_id", $psf_items['psfm_id'])->orderBy('pst_created_on', 'DESC')->findAll();
-                        $selected_user["user_psf_callsSA"][$index]["last_call_status"] = $sa_calls[0];
-                        $selected_user["user_psf_callsSA"][$index]["last_call_status"]["attempt_count"] = sizeof($sa_calls) - 1;
+                        if (!empty($sa_calls)) {
+                            $selected_user["user_psf_callsSA"][$index]["last_call_status"] = $sa_calls[0];
+                            $selected_user["user_psf_callsSA"][$index]["last_call_status"]["attempt_count"] = sizeof($sa_calls) - 1;
+                        } else {
+                            // Optional: Set default values if there are no SA calls
+                            $selected_user["user_psf_callsSA"][$index]["last_call_status"] = [];
+                            $selected_user["user_psf_callsSA"][$index]["attempt_count"] = 0;
+                        }
 
                         $index++;
                     }

@@ -2,11 +2,15 @@
 
 namespace Config;
 
+use App\Models\Firebase\FirebaseModel;
 use CodeIgniter\Config\BaseConfig;
 use \Firebase\JWT\JWT;
+use App\Models\Settings\CommonSettingsModel;
+use Twilio\Jwt\AccessToken;
 
 class Common extends BaseConfig
 {
+
 
     public function generate_user_jwt_token_expiry($user_id)
     {
@@ -58,6 +62,179 @@ class Common extends BaseConfig
 
         return array('token' => $token, 'iat' => $iat);
     }
+
+    //sending the Notification..
+    function send_notification($token, $title, $message)
+    {
+
+        $access_token = $this->getAccesToken();
+        // log_message('error', "this is from the send ----- " . $access_token);
+        $fields = array(
+            'message' => array(
+                'notification' => array(
+                    'title' => $title,
+                    'body' => $message
+                ),
+                'token' => "ctjFRpprQriLmnWhBVUqJc:APA91bED8eBmddzE0IzypCJiOzkYmuzRYsxxc0o-tXidBpaH9R87yEMG5C62vg2PTV5AjyLuJhyKw157l0Z59tW5UY8rHRE8K086dSx6Z6nwl2_lbSqrmFU"
+            )
+        );
+
+        // Set the headers
+        $headers = array(
+            "Authorization: Bearer $access_token",
+            'Content-Type: application/json'
+        );
+
+        // Initialize cURL
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, 'https://fcm.googleapis.com/v1/projects/crmtestnot/messages:send'); // Replace 'your-project-id' with your actual Firebase project ID
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($fields));
+
+        // Execute the request
+        $result = curl_exec($ch);
+
+        log_message('error', 'Some error message', ['response' => $result]);
+        log_message('error', 'cURL response: ' . $result);
+        $decodedResult = json_decode($result, true); // Convert JSON to array
+        log_message('error', 'Decoded cURL response', $decodedResult ?: ['response' => $result]);
+
+        // Check for errors
+        if (curl_errno($ch)) {
+            echo 'Curl error: ' . curl_error($ch);
+        }
+
+        // Close the cURL session
+        curl_close($ch);
+
+        // Return the result
+        return $result;
+    }
+
+
+
+
+
+    function getGoogleAccessToken()
+    {
+        $model = new CommonSettingsModel();
+        $fire = new FirebaseModel();
+
+        $common = new Common();
+        $valid = new Validation();
+
+        // $authConfigString = file_get_contents(__DIR__ . './app/crmtestnot-firebase-adminsdk-mmvea-1fa2d605f9.json');
+
+        // $authConfig = json_decode($authConfigString);
+
+
+        $privateKey = openssl_get_privatekey("-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCzb90E7LUJzrkf\nmzoKOFiDeS+r7yRE+ZBkqZEajYBaqwXtlQg0zh2xPH7VDjMdJExMCgw47HPpaEjf\n03hPUKEePcCQV7wGIXWzlrw15RPc0FkOhtSa/39vUeQU9FxCDX8lV6skh+IMojza\nJyOrSLGJodKEG0ldkZSU5OcuLdGwVjWr0MxLzHZ46ljnixaH/wIbMeJqRjyvI/j+\nCVThj8uF87BcmIm8XrqTZ8ssVAZAO83Z1iowK1QQfU680Qa61jV9kFyLkWKFoMT3\nrNdqDByYAz69MaTsvNqD17dDzqIEzqlaN3qKARzvC4cUdrmTUFtGpbQfvY8aPiyd\nzAVbV01XAgMBAAECggEARRTJA49Z94elz9xEERE2So+KYeg0j3WBOK/rlExr4Pw8\n0QXyXdoIpmaC8eWAmjSSRygLIpMt4OtsOvfANtD05p6hlzCfy8Bv/w8GML2b0wRH\ndQdFrNK2rhXZ+JNHPYrSq36//dVumqyPPvGYkuXuq+0oDgIvUZ2tlVE3C5lKRFeV\neAUjEPpGAjI5MPU0T7zESTNOKsHlFUMCyJhY347yLS9lQzHsF3SjS8yj1F7pz7wR\neiXWoEMNbr2hbBJgyTakJA2hRttkFsAZqYoqT+Z5Scx741NKlBRKQ0NhypUYZMd7\nMXUljCtX6sguMnravqY3QrUeUHDAVaYRmuSMzok0kQKBgQD5CFyxnmw799cA/w8Y\nYUn7zw6Og7a13C4LW3rjakjGvVMZcqC22BBPsf7rfLuKlh5AxHYpVeUL3SEaIlid\nJaNybMjVN51jLdhzTjSTYalGSfr/vFqBbBAfnp6d1520XyDrVZppNKuKdnz7LMMc\nsvDSms9x9HEmpWbmphjWxdW1SQKBgQC4dQnXd6NONq5QMfWfju24uswQ9xaYWu35\nH+GtpO/3cKdNQZ6gDib2FSVieymVLP481ancNA/cU+s5sI+OtkqAJ3Vmy0vyFyi8\nDyhBAi3Cm7GkEm6iH8JT9MKzwfAvcmabcLK1qKVusaiu9rziWlTcZhurMorPS3NE\n8XVakS8NnwKBgQCmMf9yhlCjQMabIp0XXy45v7huQda4zaVo7Pc5OCAzifwgWpCJ\nFe7k0NxYmhiq535vKO3Wrj06yquhvlQ3I/xNi+4H5aLCosD2SrXpud53Sz4YV8Jq\n5wxnnbsric70phvZEnsHRSBKOsMz+W6JA56WXrycx06QRQhEW4ruIn96CQKBgHef\nBwvhvVkqou7FB3o7UbUcBtz1sISLa4rE/zECJtD8ELNMW9eGdgPegMkWAEiKzjGb\nirWQWbzT+1cFRoQRec0USdGpA45zMGqNFdja1dw/5fr2LSMcn4Sc1WuH2QCcGyiw\n9GRUgzx/IFqfDq1oUWJBIa5rb5OxZYaPZECgqLgXAoGBAJwI8woQTbSBcT/Qh/aZ\n+Gj9JSHDfg0tLtfPGelOCO+tyaxMF6pphJuX6VaQB07MPlgZDKZhtS9/NN4MSmlQ\n4YlNT5DGv8ULCDMjU+qpSH56n+LmxWcK4qFEwgMrGqpygV5aJbmVaHTuMoPz7vdM\nyxiNXGAdad8kgMKktHDp7DKV\n-----END PRIVATE KEY-----\n"); // Extract from your service account JSON
+
+        $tokenUrl = 'https://oauth2.googleapis.com/token';
+
+        // Generate the JWT payload
+        $now = time();
+        $jwtPayload =  json_encode([
+            "iss" => "firebase-adminsdk-mmvea@crmtestnot.iam.gserviceaccount.com",
+            "scope" => "https://www.googleapis.com/auth/firebase.messaging", // Change to your desired scope
+            "aud" => "https://oauth2.googleapis.com/token",
+            "exp" => $now + 3600, // Expires in 1 hour
+            "iat" => $now
+        ]);
+
+        // JWT Header
+        $header = json_encode([
+            'typ' => 'JWT',
+            'alg' => 'RS256'
+        ]);
+
+        // Encode Header
+        $base64UrlHeader = base64_encode($header);
+
+        // Encode Payload
+        $base64UrlPayload = base64_encode($jwtPayload);
+
+        // Create Signature Hash
+        $result = openssl_sign($base64UrlHeader . "." . $base64UrlPayload, $signature, $privateKey, OPENSSL_ALGO_SHA256);
+
+        // Encode Signature to Base64Url String
+        $base64UrlSignature = base64_encode($signature);
+
+        // Encode and sign the JWT
+        $jwt = $base64UrlHeader . "." . $base64UrlPayload . "." . $base64UrlSignature;
+
+        // Request the access token
+        $curl = curl_init();
+        curl_setopt_array($curl, [
+            CURLOPT_URL => $tokenUrl,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => http_build_query([
+                "grant_type" => "urn:ietf:params:oauth:grant-type:jwt-bearer",
+                "assertion" => $jwt
+            ]),
+            CURLOPT_HTTPHEADER => [
+                "Content-Type: application/x-www-form-urlencoded"
+            ]
+        ]);
+
+        $response = curl_exec($curl);
+        if (curl_errno($curl)) {
+            die("Error fetching access token: " . curl_error($curl));
+        }
+        curl_close($curl);
+
+        $data = json_decode($response, true);
+
+        if (!isset($data['access_token'])) {
+            die("Failed to get access token: " . $response);
+        }
+
+        global $accessToken, $tokenExpiry;
+
+
+        $accessToken = $data['access_token'];
+        $tokenExpiry = time() + $data['expires_in'] - 60; // Subtract 60 seconds for buffer
+        log_message('error', "this is the fornatted tokenexpiry time" . $tokenExpiry);
+        log_message("error", time());
+
+        $res = [
+            'firebase_access_token' => $accessToken,
+            'firebase_token_time' => $tokenExpiry
+        ];
+
+        $fire->where('firebase_id', 1)->set($res)->update();
+
+        log_message('error', $tokenExpiry);
+        log_message('error', json_encode($response));
+
+        return $accessToken;
+    }
+
+    public function getAccesToken()
+    {
+
+        log_message("error", "this is inside the get access token");
+
+        global $accessToken, $tokenExpiry;
+
+        $fire = new FirebaseModel();
+        $query = $fire->where('firebase_id', 1)->get();
+        $result = $query->getRow();
+        $firebaseAccessToken = $result->firebase_access_token;
+        $firebaseTime = $result->firebase_token_time;
+
+        if ($firebaseAccessToken === null || time() >= $firebaseTime) {
+            $newToken = $this->getGoogleAccessToken();
+            return $newToken;
+        } else {
+            return $firebaseAccessToken;
+        }
+    }
+
+
     public function generate_superadmin_jwt_token($user_id)
     {
 
@@ -128,7 +305,7 @@ class Common extends BaseConfig
         $accessToken = 'your_access_token';      // Replace with your access token
 
         // Set the URL for the DELETE request
-        $url='https://graph.facebook.com/v17.0/' . getenv('WB_PHONE_ID') . '/messages?message_id='.$message_id;
+        $url = 'https://graph.facebook.com/v17.0/' . getenv('WB_PHONE_ID') . '/messages?message_id=' . $message_id;
         // $url = "https://graph.facebook.com/v15.0/{$phoneNumberId}/messages?message_id={$messageId}";
 
         // Initialize cURL session
@@ -213,9 +390,9 @@ class Common extends BaseConfig
                 $folder = 'video';
             } else if ($type == 8) {
                 $folder = 'sticker';
-            } else if($type == 3){
+            } else if ($type == 3) {
                 $folder = 'documents';
-            }else{
+            } else {
                 $folder = 'general';
             }
             $result = $awss3->putObject([
@@ -280,11 +457,12 @@ class Common extends BaseConfig
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         $result = json_decode(curl_exec($ch));
         curl_close($ch);
-
+        log_message('error', "this is from the send ----- >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
         return $result;
     }
 
-    public function getAdCampaignId($ad_id) {
+    public function getAdCampaignId($ad_id)
+    {
         $client = \Config\Services::curlrequest();
         $URL = 'https://graph.facebook.com/v17.0/' . $ad_id . '?fields=campaign_id';
         $ch = curl_init($URL);
@@ -296,7 +474,7 @@ class Common extends BaseConfig
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         $result = json_decode(curl_exec($ch));
         curl_close($ch);
-    
+
         return $result;
     }
 
@@ -319,3 +497,35 @@ class Common extends BaseConfig
         return $temp;
     }
 }
+
+        
+    
+
+    
+    
+        
+        
+    
+
+    
+    
+        
+        
+    
+
+
+        
+    
+
+    
+    
+        
+        
+    
+
+    
+    
+        
+        
+    
+

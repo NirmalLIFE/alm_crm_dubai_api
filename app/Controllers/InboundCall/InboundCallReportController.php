@@ -877,13 +877,18 @@ class InboundCallReportController extends ResourceController
             $leadCallLog = new LeadCallLogModel();
             $ystarId = $this->request->getVar('callId');
             $customerWithId = $leadCallLog->whereIn('ystar_call_id', $ystarId)
-                ->join('leads', 'leads.lead_id = lead_call_log.lcl_lead_id', 'left')->join('call_purposes', 'call_purposes.cp_id = leads.purpose_id', 'left')
+                ->join('leads', 'leads.lead_id = lead_call_log.lcl_lead_id', 'left')
+                ->join('call_purposes', 'call_purposes.cp_id = leads.purpose_id', 'left')
+                ->join('lead_source', 'lead_source.ld_src_id = leads.source_id', 'left')
                 ->select([
                     'lead_call_log.lcl_phone as phone',
                     'call_purposes.call_purpose as call_purpose',
                     'leads.name as name',
+                    'leads.source_id',
+                    'lead_source.ld_src',
                     'lead_call_log.ystar_call_id as ystar_call_id',
-                    'purpose_id', 'lead_note',
+                    'purpose_id',
+                    'lead_note',
                 ])
                 ->findAll();
             // $ystarIdData = $customerDetails->toArray();

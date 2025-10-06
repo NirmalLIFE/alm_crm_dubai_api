@@ -107,12 +107,14 @@ class PSFCREAdminController extends ResourceController
         }
         if ($tokendata['aud'] != "") {
             $psf_master = new PSFMasterModel();
-            $user_monthly_count=0;
-            $response["user_success_count"]=0;
+            $user_monthly_count = 0;
+            $response["user_success_count"] = 0;
+            $us_id = $this->request->getVar('us_id');
             if ($user['us_role_id'] == 9) {
                 $user_psf = $psf_master->select('cust_data_laabs.customer_name,cust_data_laabs.phone,psfm_id,psfm_job_no,psfm_reg_no,psfm_invoice_date,psfm_psf_assign_date,psfm_cre_assign_date,psfm_status,psfm_num_of_attempts,psfm_sa_rating,psfm_cre_rating,rm_id,rm_name')
-                    ->where('psfm_current_assignee', '19')
+                    ->where('psfm_current_assignee',  $us_id)
                     ->where('psfm_delete_flag', 0)
+                    ->where('psfm_assign_flag', 2)
                     ->where('(psfm_status=2 or psfm_status=4 or psfm_status=5 or psfm_status=6 or psfm_status=16)')
                     //->where('DATE(psfm_cre_assign_date) <= ','2023-05-02')
                     ->where('DATE(psfm_cre_assign_date) <= ', date('Y-m-d'))
@@ -122,10 +124,10 @@ class PSFCREAdminController extends ResourceController
                     ->orderBy('psfm_cre_assign_date', 'asc')
                     ->findAll();
                 $psf_tracker = new PSFstatusTrackModel();
-                $user_monthly_count = $psf_tracker->select('COUNT(*) as exp_count')->where('pst_sourceid', 19)
+                $user_monthly_count = $psf_tracker->select('COUNT(*) as exp_count')->where('pst_sourceid',  $us_id)
                     ->where('pst_psf_status', 10)->where("MONTH(pst_created_on)=", date('m'))
                     ->where("YEAR(pst_created_on)=", date('Y'))->first();
-                $user_monthly_count_success = $psf_tracker->select('COUNT(*) as success_count')->where('pst_sourceid', 19)
+                $user_monthly_count_success = $psf_tracker->select('COUNT(*) as success_count')->where('pst_sourceid',  $us_id)
                     ->where('pst_psf_status', 7)->where("MONTH(pst_created_on)=", date('m'))
                     ->where("YEAR(pst_created_on)=", date('Y'))->first();
             } else {
@@ -140,7 +142,7 @@ class PSFCREAdminController extends ResourceController
                     $cre_count = $psf_historyModel
                         ->select('count(*) as cre_count')
                         ->where('psf_id', $value['psfm_id'])
-                        ->where('psf_user_id', '19')
+                        ->where('psf_user_id', $us_id)
                         ->first();
                     $user_psf[$i]['cre_attempts'] = $cre_count['cre_count'];
                     $i++;
@@ -228,4 +230,3 @@ class PSFCREAdminController extends ResourceController
         }
     }
 }
-

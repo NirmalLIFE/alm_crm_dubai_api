@@ -14,7 +14,7 @@ class LabourMaster extends Model
     protected $returnType       = 'array';
     protected $useSoftDeletes   = false;
     protected $protectFields    = true;
-    protected $allowedFields    = ['lm_id','lm_code','lm_name','lm_description','lm_created_on','lm_created_by','lm_updated_on','lm_updated_by','lm_delete_flag'];
+    protected $allowedFields    = ['lm_id', 'lm_code', 'lm_name', 'lm_description', 'lm_created_on', 'lm_created_by', 'lm_updated_on', 'lm_updated_by', 'lm_delete_flag'];
 
     // Dates
     protected $useTimestamps = false;

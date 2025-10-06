@@ -21,6 +21,8 @@ use App\Models\Settings\WhatsappMessageModel;
 use App\Models\PSFModule\PSFCallHistoryModel;
 use App\Models\PSFModule\PSFMasterModel;
 use App\Models\PSFModule\PSFstatusTrackModel;
+use App\Models\Customer\MaraghiJobcardModel;
+use DateTime;
 
 
 class StaffDash extends ResourceController
@@ -641,10 +643,10 @@ class StaffDash extends ResourceController
                 ->join('users', 'users.us_laabs_id = psf_master.psfm_sa_id', 'left')
                 ->join("($subquery) as latest_calls", 'latest_calls.psf_id = psf_master.psfm_id', 'left')
                 ->join('psf_call_history', 'psf_call_history.psf_call_id = latest_calls.latest_call_id', 'left')
-                ->where('DATE(psfm_psf_assign_date) >=', $this->request->getVar('dateFrom'))
-                ->where('DATE(psfm_psf_assign_date) <=', $this->request->getVar('dateTo'))
+                ->where('DATE(psfm_cre_assign_date) >=', $this->request->getVar('dateFrom'))
+                ->where('DATE(psfm_cre_assign_date) <=', $this->request->getVar('dateTo'))
                 ->where('psf_master.psfm_sa_id', $this->request->getVar('id'))
-                ->orderBy('psfm_psf_assign_date', 'desc')
+                ->orderBy('psfm_cre_assign_date', 'desc')
                 ->groupBy('psfm_id')
                 ->select('whatsapp_message_master.*, cust_data_laabs.*, psf_master.*, users.us_firstname as sa, users.us_id as sa_id, psf_call_history.psf_response')
                 ->get()
@@ -672,6 +674,136 @@ class StaffDash extends ResourceController
                 $response = [
                     'ret_data' => 'fail',
                     'messages' => [],
+                ];
+            }
+            return $this->respond($response, 200);
+        }
+    }
+
+    public function getRetentionCustomers()
+    {
+        $common = new Common();
+        $valid = new Validation();
+
+        $heddata = $this->request->headers();
+        $tokendata = $common->decode_jwt_token($valid->getbearertoken($heddata['Authorization']));
+        if ($tokendata['aud'] == 'superadmin') {
+            $SuperModel = new SuperAdminModel();
+            $super = $SuperModel->where("s_adm_id", $this->db->escapeString($tokendata['uid']))->first();
+            if (!$super) return $this->fail("invalid user", 400);
+        } else if ($tokendata['aud'] == 'user') {
+            $usmodel = new UserModel();
+            $user = $usmodel->where("us_id", $this->db->escapeString($tokendata['uid']))->first();
+            if (!$user) return $this->fail("invalid user", 400);
+        } else {
+            $data['ret_data'] = "Invalid user";
+            return $this->fail($data, 400);
+        }
+        if ($tokendata) {
+            $us_laab_id = $this->request->getVar('id');
+
+            $cust_job_data_laabs_model = new MaraghiJobcardModel();
+
+            // Subquery to get latest invoice per CUSTOMER (not vehicle)
+            $subQuery = "
+            SELECT
+            customer_no,
+            MAX(STR_TO_DATE(invoice_date, '%d-%b-%y')) AS max_inv_date
+        FROM cust_job_data_laabs
+        WHERE job_status = 'INV'
+        GROUP BY customer_no
+        ";
+
+            // Fetch customers with their last invoice details
+            $customers = $cust_job_data_laabs_model
+                ->select("
+            cust_job_data_laabs.*,
+            STR_TO_DATE(cust_job_data_laabs.invoice_date, '%d-%b-%y') as invoice_date_d,
+            cust_data_laabs.customer_name,
+            cust_data_laabs.mobile,
+            cust_data_laabs.customer_type,
+            s.max_inv_date
+        ")
+                ->join("($subQuery) as s", "s.customer_no = cust_job_data_laabs.customer_no 
+                AND STR_TO_DATE(cust_job_data_laabs.invoice_date, '%d-%b-%y') = s.max_inv_date")
+                ->join("cust_data_laabs", "cust_data_laabs.customer_code = cust_job_data_laabs.customer_no", "left")
+                ->where('cust_job_data_laabs.sa_emp_id', $us_laab_id)
+                ->groupBy('cust_job_data_laabs.customer_no')
+                ->orderBy("s.max_inv_date", "ASC", false)
+                ->findAll();
+
+            // ----------------------
+            // Grouping Logic
+            // ----------------------
+            $currentMonth = new DateTime(); // e.g. Sep 2025
+            $oneYearAgo   = (clone $currentMonth)->modify('-12 months'); // Aug 2024
+            $twoYearsAgo  = (clone $currentMonth)->modify('-24 months'); // Sep 2023
+
+            $grouped = [];
+            $totalCount = 0;
+
+            foreach ($customers as $cust) {
+                $lastInvoiceDate = new DateTime($cust['invoice_date_d']);
+                $label = $lastInvoiceDate->format('M y'); // Example: "Sep 24"
+
+                if ($lastInvoiceDate >= $twoYearsAgo && $lastInvoiceDate < $oneYearAgo) {
+                    // Month-wise group
+                    if (!isset($grouped[$label])) {
+                        $grouped[$label] = [];
+                    }
+                    $grouped[$label][] = $cust;
+                    $totalCount++;
+                } elseif ($lastInvoiceDate < $twoYearsAgo) {
+                    // Old bucket
+                    if (!isset($grouped['Old'])) {
+                        $grouped['Old'] = [];
+                    }
+                    $grouped['Old'][] = $cust;
+                    $totalCount++;
+                }
+
+            }
+
+
+            // ----------------------
+            // Rebuild ordered output (force clean order)
+            // ----------------------
+            $ordered = [];
+
+            // Collect all month keys from grouped (skip Old)
+            $monthKeys = array_keys($grouped);
+            $monthKeys = array_filter($monthKeys, fn($k) => $k !== 'Old');
+
+            // Sort keys by date descending (latest first)
+            usort($monthKeys, function ($a, $b) {
+                $da = \DateTime::createFromFormat('M y', $a);
+                $db = \DateTime::createFromFormat('M y', $b);
+                return $db <=> $da; // latest first
+            });
+
+            // Rebuild clean
+            foreach ($monthKeys as $key) {
+                $ordered[$key] = $grouped[$key];
+            }
+
+            // Add Old bucket if exists
+            if (isset($grouped['Old'])) {
+                $ordered['Old'] = $grouped['Old'];
+            }
+
+            // Add totalCount
+            $ordered['totalCount'] = $totalCount;
+
+
+            if ($grouped) {
+                $response = [
+                    'ret_data' => 'success',
+                    'customers' => $ordered,
+                ];
+            } else {
+                $response = [
+                    'ret_data' => 'fail',
+                    'customers' => [],
                 ];
             }
             return $this->respond($response, 200);

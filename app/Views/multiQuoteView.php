@@ -372,10 +372,18 @@
                         <b>Notes</b></span></td>
             </tr>
             <?php if (!empty($qt_version1['qvm_note'])) { ?><tr>
-                    <td><span style="font-size: 12px; font-style:italic;">Option A :<?= $qt_version1['qvm_note']; ?></span></td>
+                    <td style="vertical-align: top;">
+                        <pre style="margin: 0; font-family: DejaVu Sans, sans-serif; font-size:12px;">
+Option A : <?= htmlspecialchars($qt_version1['qvm_note']) ?>
+    </pre>
+                    </td>
                 </tr><?php } ?>
             <?php if (!empty($qt_version2['qvm_note'])) { ?><tr>
-                    <td> <span style="font-size: 12px; font-style:italic;">Option B :<?= $qt_version2['qvm_note']; ?></span></span></td>
+                    <td style="vertical-align: top;">
+                        <pre style="margin: 0; font-family: DejaVu Sans, sans-serif; font-size:12px;">
+Option B : <?= htmlspecialchars($qt_version2['qvm_note']) ?>
+    </pre>
+                    </td>
                 </tr><?php } ?>
 
             <tr>

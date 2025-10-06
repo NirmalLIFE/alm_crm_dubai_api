@@ -14,7 +14,7 @@ class AppointmentLogModel extends Model
     protected $returnType       = 'array';
     protected $useSoftDeletes   = false;
     protected $protectFields    = true;
-    protected $allowedFields    = ['applg_id','applg_apptm_id','applg_time','applg_note','applg_created_on','applg_created_by'];
+    protected $allowedFields    = ['applg_id','applg_apptm_id','applg_time','applg_note','applg_job_no','applg_created_on','applg_created_by'];
 
     // Dates
     protected $useTimestamps = false;

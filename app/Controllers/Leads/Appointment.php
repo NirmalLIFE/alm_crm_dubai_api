@@ -391,10 +391,12 @@ class Appointment extends ResourceController
                     ->join('dissatisfied_master', 'dissatisfied_master.ldm_id=apptm_diss_id', 'left')
                     ->join('psf_master', 'psf_master.psfm_id=ldm_psf_id', 'left')
                     ->orderBy('appt_id', 'DESC')
-                    ->select('apptm_id,apptm_lead_id,apptm_status,apptm_transport_service,apptm_created_on,
+                    ->select('apptm_id,apptm_lead_id,apptm_status,apptm_transport_service,apptm_created_on,source_id,
                 apptm_created_by,apptm_updated_on,apptm_updated_by,apptm_delete_flag,lead_code,users.us_firstname,
                 name ,leads.phone as lphone,status_id as lead_status,apptm_code,appt_assign_to,appt_note,apptm_group,
-                appt_time,appt_date,apptm_customer_code,appt_created_by,apptm_type,cust_data_laabs.customer_name,cust_data_laabs.phone as cphone,ld_src as lead_source,vehicle_model,register_number,ldm_psf_id,psfm_reg_no');
+                appt_time,appt_date,apptm_customer_code,apptm_pickup_mode,appt_created_by,apptm_type,cust_data_laabs.customer_name,
+                cust_data_laabs.phone as cphone,ld_src as lead_source,vehicle_model,register_number,ldm_psf_id,psfm_reg_no,
+                ld_verify_flag');
                 // ->findAll();
 
                 if (!empty($dateFrom)) {
@@ -414,33 +416,150 @@ class Appointment extends ResourceController
                 }
             } else {
 
-                $Apptcalls = $appointment->whereIn('apptm_status', $status)
+                // 1) First‑job sub‑query
+                $firstJobSub = $this->db
+                    ->table('cust_job_data_laabs')
+                    ->select("
+                    customer_no,
+                    MIN(STR_TO_DATE(job_open_date, '%d-%b-%y')) AS first_job_open_date
+                ")
+                    ->groupBy('customer_no');
+
+
+
+                $appointment->select([
+                    'apptm_id',
+                    'apptm_lead_id',
+                    'apptm_status',
+                    'apptm_transport_service',
+                    'apptm_created_on',
+                    'source_id',
+                    'apptm_created_by',
+                    'apptm_updated_on',
+                    'apptm_updated_by',
+                    'apptm_delete_flag',
+                    'lead_code',
+                    'users.us_firstname',
+                    'name',
+                    'leads.phone AS lphone',
+                    'status_id AS lead_status',
+                    'apptm_code',
+                    'appt_assign_to',
+                    'appt_note',
+                    'apptm_group',
+                    'appt_time',
+                    'appt_date',
+                    'appt_created_by',
+                    'apptm_type',
+                    'cust_data_laabs.customer_name',
+                    'cust_data_laabs.phone AS cphone',
+                    'ld_src AS lead_source',
+                    'apptm_pickup_mode',
+                    'vehicle_model',
+                    'register_number',
+                    'ldm_psf_id',
+                    'psfm_reg_no',
+                    'cust_data_laabs.customer_code',
+                    'fj.first_job_open_date',
+                    'appt_created_on',
+                    'ld_verify_flag',
+                    "CASE
+                  WHEN fj.first_job_open_date >= appointment.appt_date
+                  OR cust_data_laabs.customer_code IS NULL
+                  THEN 'NEW'
+                  ELSE 'EXISTING'
+                  END AS customer_type"
+                ])
+                    ->whereIn('apptm_status', $status)
                     ->where('appointment.appt_status', 0)
                     ->where('apptm_delete_flag !=', 1)
-                    ->join('leads', 'leads.lead_id = apptm_lead_id', 'left')
-                    ->join('lead_source', 'lead_source.ld_src_id = leads.source_id', 'left')
-                    ->join('appointment', 'appointment.appt_apptm_id = apptm_id', 'left')
-                    ->join('users', 'users.us_id = appointment.appt_assign_to', 'left')
-                    ->join('cust_data_laabs', 'RIGHT(cust_data_laabs.phone, 9) = RIGHT(leads.phone, 9)', 'left')
-                    ->join('dissatisfied_master', 'dissatisfied_master.ldm_id = apptm_diss_id', 'left')
-                    ->join('psf_master', 'psf_master.psfm_id = ldm_psf_id', 'left')
-                    ->orderBy('appt_id', 'DESC')
-                    ->groupBy('appt_id')
-                    ->select('apptm_id, apptm_lead_id, apptm_status, apptm_transport_service, apptm_created_on,
-              apptm_created_by, apptm_updated_on, apptm_updated_by, apptm_delete_flag, lead_code, users.us_firstname,
-              name, leads.phone as lphone, status_id as lead_status, apptm_code, appt_assign_to, appt_note, apptm_group,
-              appt_time, appt_date, appt_created_by, apptm_type, cust_data_laabs.customer_name, cust_data_laabs.phone as cphone,
-              ld_src as lead_source, vehicle_model, register_number, ldm_psf_id, psfm_reg_no, cust_data_laabs.customer_code,');
+                    ->join(
+                        'leads',
+                        'leads.lead_id = apptm_lead_id',
+                        'left'
+                    )
+                    ->join(
+                        'lead_source',
+                        'lead_source.ld_src_id = leads.source_id',
+                        'left'
+                    )
+                    ->join(
+                        'appointment',
+                        'appointment.appt_apptm_id = apptm_id',
+                        'left'
+                    )
+                    ->join(
+                        'users',
+                        'users.us_id = appointment.appt_assign_to',
+                        'left'
+                    )
+                    ->join(
+                        'cust_data_laabs',
+                        'RIGHT(cust_data_laabs.phone,9) = RIGHT(leads.phone,9)',
+                        'left'
+                    )
+                    ->join(
+                        'dissatisfied_master',
+                        'dissatisfied_master.ldm_id = apptm_diss_id',
+                        'left'
+                    )
+                    ->join(
+                        'psf_master',
+                        'psf_master.psfm_id = ldm_psf_id',
+                        'left'
+                    )
+                    // inject the sub‑query as "fj" (disable automatic escaping)
+                    ->join(
+                        '(' . $firstJobSub->getCompiledSelect() . ') AS fj',
+                        'fj.customer_no = cust_data_laabs.customer_code',
+                        'left',
+                        false
+                    )
+                    ->orderBy('appt_id', 'DESC');
 
-                if (!empty($dateFrom)) {
-                    $Apptcalls->where('DATE(appt_date) >=', $dateFrom);
+                // 3) Apply your date filters with plain if‑statements
+                if (! empty($dateFrom)) {
+                    $appointment->where('DATE(appt_date) >=', $dateFrom);
+                }
+                if (! empty($dateTo)) {
+                    $appointment->where('DATE(appt_date) <=', $dateTo);
                 }
 
-                if (!empty($dateTo)) {
-                    $Apptcalls->where('DATE(appt_date) <=', $dateTo);
-                }
+                // 4) Finally fetch all rows
+                $Apptcalls = $appointment->findAll();
 
-                $Apptcalls = $Apptcalls->findAll();
+
+                // currently working query
+
+                //     $Apptcalls = $appointment->whereIn('apptm_status', $status)
+                //         ->where('appointment.appt_status', 0)
+                //         ->where('apptm_delete_flag !=', 1)
+                //         ->join('leads', 'leads.lead_id = apptm_lead_id', 'left')
+                //         ->join('lead_source', 'lead_source.ld_src_id = leads.source_id', 'left')
+                //         ->join('appointment', 'appointment.appt_apptm_id = apptm_id', 'left')
+                //         ->join('users', 'users.us_id = appointment.appt_assign_to', 'left')
+                //         ->join('cust_data_laabs', 'RIGHT(cust_data_laabs.phone, 9) = RIGHT(leads.phone, 9)', 'left')
+                //         ->join('dissatisfied_master', 'dissatisfied_master.ldm_id = apptm_diss_id', 'left')
+                //         ->join('psf_master', 'psf_master.psfm_id = ldm_psf_id', 'left')
+                //         ->orderBy('appt_id', 'DESC')
+                //         ->groupBy('appt_id')
+                //         ->select('apptm_id, apptm_lead_id, apptm_status, apptm_transport_service, apptm_created_on,source_id,
+                //   apptm_created_by, apptm_updated_on, apptm_updated_by, apptm_delete_flag, lead_code, users.us_firstname,
+                //   name, leads.phone as lphone, status_id as lead_status, apptm_code, appt_assign_to, appt_note, apptm_group,
+                //   appt_time, appt_date, appt_created_by, apptm_type, cust_data_laabs.customer_name, cust_data_laabs.phone as cphone,
+                //   ld_src as lead_source,apptm_pickup_mode, vehicle_model, register_number, ldm_psf_id, psfm_reg_no, cust_data_laabs.customer_code,');
+
+                //     if (!empty($dateFrom)) {
+                //         $Apptcalls->where('DATE(appt_date) >=', $dateFrom);
+                //     }
+
+                //     if (!empty($dateTo)) {
+                //         $Apptcalls->where('DATE(appt_date) <=', $dateTo);
+                //     }
+
+                //     $Apptcalls = $Apptcalls->findAll();
+
+                //Old  Query
 
                 // $Apptcalls = $appointment->whereIn('apptm_status', $status)
                 //     ->where('appointment.appt_status =', 0)
@@ -555,7 +674,7 @@ class Appointment extends ResourceController
                 apptm_transport_service,apptm_created_on,apptm_created_by,apptm_updated_on,apptm_updated_by,
                 apptm_delete_flag,lead_code,name,apptm_type,leads.phone as lphone,status_id as lead_status,
                 appt_date,appt_time,appt_note,appt_assign_to,leads.lead_code,cust_data_laabs.customer_name,apptm_group,
-                cust_data_laabs.phone as cphone,ld_src as lead_source,leads.register_number,leads.lead_note,lead_social_media_source,lead_social_media_mapping,smc_name,smc_message,smcs_name,source_id')
+                cust_data_laabs.phone as cphone,ld_src as lead_source,leads.register_number,leads.lead_note,lead_social_media_source,lead_social_media_mapping,smc_name,smc_message,smcs_name,source_id,ld_verify_flag,lead_id')
                 ->first();
 
             $AllAppoints = $Appoint->select('appt_assign_to,appt_note,appt_time,appt_date,appt_created_by')
@@ -712,6 +831,7 @@ class Appointment extends ResourceController
                     'applg_created_by' => $tokendata['uid'],
                     'applg_created_on' => date("Y-m-d H:i:s"),
                     'applg_time' => date("Y-m-d H:i:s"),
+                    'applg_job_no' => $this->request->getVar('confirmJobNo'),
                 ];
                 $logentry = $Appointmentlog->insert($Logdata);
             } else if ($app_status == "6") //Appointment General Enquiry
@@ -1167,19 +1287,40 @@ class Appointment extends ResourceController
 
             $latestJobcards = [];
 
-            foreach ($phones as $phone) {
-                $lastNineDigits = substr($phone, -9);
-                $jobcard = $customerModel->where('RIGHT(phone,9)', $lastNineDigits)
-                    ->join('cust_job_data_laabs ', 'customer_no=customer_code', 'left')
+            if (!empty($phones)) {
+                $lastNineDigitsArray = array_map(function ($phone) {
+                    return substr($phone, -9);
+                }, $phones);
+
+                // Fetch jobcards for all phones in a single query
+                $latestJobcards = $customerModel
+                    ->select('cust_job_data_laabs.*, cust_data_laabs.*') // Adjust fields as necessary
+                    ->join('cust_job_data_laabs', 'customer_no = customer_code', 'left')
+                    ->whereIn('RIGHT(phone, 9)', $lastNineDigitsArray)
                     ->orderBy('job_no', 'desc')
-                    ->first();
-                // $jobcard = $maraghiJobcards->where('customer_no', $code)
-                //     ->orderBy('job_no', 'desc')
-                //     ->first();
-                if ($jobcard) {
-                    array_push($latestJobcards, $jobcard);
-                }
+                    ->findAll();
+
+                // Optionally filter or transform the result if needed
+                $latestJobcards = array_filter($latestJobcards, function ($jobcard) {
+                    return !empty($jobcard); // Adjust condition if required
+                });
+            } else {
+                $latestJobcards = [];
             }
+
+            // foreach ($phones as $phone) {
+            //     $lastNineDigits = substr($phone, -9);
+            //     $jobcard = $customerModel->where('RIGHT(phone,9)', $lastNineDigits)
+            //         ->join('cust_job_data_laabs ', 'customer_no=customer_code', 'left')
+            //         ->orderBy('job_no', 'desc')
+            //         ->first();
+            //     // $jobcard = $maraghiJobcards->where('customer_no', $code)
+            //     //     ->orderBy('job_no', 'desc')
+            //     //     ->first();
+            //     if ($jobcard) {
+            //         array_push($latestJobcards, $jobcard);
+            //     }
+            // }
 
             if (sizeof($latestJobcards) > 0) {
                 $response = [

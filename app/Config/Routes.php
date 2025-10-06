@@ -113,6 +113,7 @@ $routes->post('Leads/Lead/closeLead', "Leads/Lead::closeLead", ['filter' => 'aut
 $routes->get('getDashDatas', "User/UserController::userDash", ['filter' => 'authFilter']);
 
 $routes->resource('permittedIP', ['controller' => 'PermittedIP']);
+$routes->post('deleteIPAddress', 'PermittedIP::deleteIPAddress', ['filter' => 'authFilter']);
 
 $routes->get('verifyLogin', "User/UserController::verifyLogin", ['filter' => 'authFilter']);
 $routes->get('call_count', "User/UserController::call_count", ['filter' => 'authFilter']);
@@ -422,13 +423,40 @@ $routes->post('sendCampaignMessage', "Whatsapp/WhatsappChatController::sendCampa
 $routes->post('sendNewCustomerCampaignNewMessage', "Whatsapp/WhatsappChatController::sendNewCustomerCampaignNewMessage", ['filter' => 'authFilter']);
 $routes->post('searchWhatsappCustomer', "Whatsapp/WhatsappChatController::searchWhatsappCustomer", ['filter' => 'authFilter']);
 $routes->get('getWhatsappCustomersFollowups', "Whatsapp/WhatsappChatController::getWhatsappCustomersFollowups", ['filter' => 'authFilter']);
-$routes->get('sendSMCWithDays', "Customer/CustomerReEngageCampaignController::sendSMCWithDays", ['filter' => 'authFilter']);
-$routes->post('fetchAllFollowUpCustomers', "Customer/CustomerReEngageCampaignController::fetchAllFollowUpCustomers", ['filter' => 'authFilter']);
+$routes->post('updateSocialMediaCampaignBudget', "SocialMediaCampaign/SocialMediaCampaignController::updateSocialMediaCampaignBudget", ['filter' => 'authFilter']);
+$routes->post('logout', 'Login::logout');
+$routes->post('getLeadsList', "Leads/Lead::getLeadsList", ['filter' => 'authFilter']);
+$routes->post('sendBroadcastWhatsappCampaignMessage', "Whatsapp/WhatsappChatController::sendBroadcastWhatsappCampaignMessage", ['filter' => 'authFilter']);
+$routes->resource('Customer/CustomerReEngageCampaignController', ['filter' => 'authFilter']);
+$routes->post('getCustomerReEngageCampaignReport', "Customer/CustomerReEngageCampaignController::getCustomerReEngageCampaignReport", ['filter' => 'authFilter']);
 $routes->get("getServiceRemainderDays", "Settings/CommonSettings::getServiceRemainderDays", ['filter' => 'authFilter']);
 $routes->post('updateServiceRemainderDays', "Settings/CommonSettings::updateServiceRemainderDays", ['filter' => 'authFilter']);
+$routes->get('sendSMCWithDays', "Customer/CustomerReEngageCampaignController::sendSMCWithDays", ['filter' => 'authFilter']);
+$routes->post('searchWhatsappCustomersByPhoneNumbers', "Whatsapp/WhatsappChatController::searchWhatsappCustomersByPhoneNumbers", ['filter' => 'authFilter']);
 $routes->post('getSRCReport', "Customer/CustomerReEngageCampaignController::getSRCReport", ['filter' => 'authFilter']);
 $routes->post('getAppointmentCustomersFromSRC', "Customer/CustomerReEngageCampaignController::getAppointmentCustomersFromSRC", ['filter' => 'authFilter']);
+$routes->post('fetchAllFollowUpCustomers', "Customer/CustomerReEngageCampaignController::fetchAllFollowUpCustomers", ['filter' => 'authFilter']);
+$routes->post('getCampaignCustomerJobcards', "Customer/CustomerReEngageCampaignController::getCampaignCustomerJobcards", ['filter' => 'authFilter']);
+$routes->post('fetchAllNewCustomers', "Customer/CustomerConversionReportController::fetchAllNewCustomers", ['filter' => 'authFilter']);
+$routes->post('getQuoteDetailsByIdView', "Quotes/Quotation::getQuoteDetailsByIdView", ['filter' => 'authFilter']);
+$routes->post('fetchAllLeadsByPhone', "Leads/Lead::fetchAllLeadsByPhone", ['filter' => 'authFilter']);
 $routes->post('updateWhatsappAutoMessageHours', "Whatsapp/WhatsappChatController::updateWhatsappAutoMessageHours", ['filter' => 'authFilter']);
+$routes->post('fetchAllNewCustomerLeads', "Customer/CustomerConversionReportController::fetchAllNewCustomerLeads", ['filter' => 'authFilter']);
+$routes->post('getPurposeNot', "Whatsapp/WhatsappChatController::getPurposeNot", ['filter' => 'authFilter']);
+$routes->post('updateLeadVerificationFlag', "Leads/Lead::updateLeadVerificationFlag", ['filter' => 'authFilter']);
+$routes->post('updateLeadCategory', "Whatsapp/WhatsappChatController::updateLeadCategory", ['filter' => 'authFilter']);
+$routes->get('getLeadCategoryCount', "Whatsapp/WhatsappChatController::getLeadCategoryCount", ['filter' => 'authFilter']);
+$routes->post('getCategoryCust', "Whatsapp/WhatsappChatController::getCategoryCust", ['filter' => 'authFilter']);
+$routes->post('getLeadCategoryCustomers', "Whatsapp/WhatsappChatController::getLeadCategoryCustomers", ['filter' => 'authFilter']);
+$routes->post('getNewSRCReport', "Customer/CustomerReEngageCampaignController::getNewSRCReport", ['filter' => 'authFilter']);
+$routes->post('getRetentionCustomers', "User/StaffDash::getRetentionCustomers", ['filter' => 'authFilter']);
+$routes->post('updateWorkshopDays', "Settings/CommonSettings::updateWorkshopTiming", ['filter' => 'authFilter']);
+$routes->get('getWorksdaysTiming', "Settings/CommonSettings::getWorksdaysTiming", ['filter' => 'authFilter']);
+$routes->post('saveOffDays', "Settings/CommonSettings::saveOffDays", ['filter' => 'authFilter']);
+$routes->get('getOffDays', "Settings/CommonSettings::getOffDays", ['filter' => 'authFilter']);
+$routes->post('saveAwayMessage', "Settings/CommonSettings::saveAwayMessage", ['filter' => 'authFilter']);
+$routes->get('getAwayMessage', "Settings/CommonSettings::getAwayMessage", ['filter' => 'authFilter']);
+$routes->post('testMessageSend', "Whatsapp/WhatsappChatController::testMessageSend", ['filter' => 'authFilter']);
 
 
 
@@ -482,14 +510,12 @@ $routes->get("getRequestedPrices", "SpareParts/SparePartsController::servicePkgP
 $routes->post("cancelPrice", "SpareParts/SparePartsController::cancelPrice", ['filter' => 'authFilter']);
 $routes->post("acceptPrice", "SpareParts/SparePartsController::acceptPrice", ['filter' => 'authFilter']);
 $routes->post("getPartcodeprice", "ServicePackage/ServicePackageController::getPartcodeprice", ['filter' => 'authFilter']);
-
-
-
-
-
-
-
-
+$routes->post("getLogsByModelCode", "ServicePackage/ServicePackageController::getLogsByModelCode", ['filter' => 'authFilter']);
+$routes->post("deleteServicePackageModelCode", "ServicePackage/ServicePackageController::deleteServicePackageModelCode", ['filter' => 'authFilter']);
+$routes->post('removeSpmcLock', 'Login::removeSpmcLock', ['filter' => 'authFilter']);
+$routes->get('updateModelCodeFromLaabs', 'ServicePackage/ServicePackageController::updateModelCodeFromLaabs', ['filter' => 'authFilter']);
+$routes->post("getServicePackageByRegNo", "ServicePackage/ServicePackageController::getServicePackageByRegNo", ['filter' => 'authFilter']);
+$routes->post("getCustomerRegNo", "ServicePackage/ServicePackageController::getCustomerRegNo", ['filter' => 'authFilter']);
 
 
 
@@ -519,7 +545,7 @@ $routes->resource('PSFModule/PSFController', ['filter' => 'authFilter']);
 $routes->resource('PSFModule/PSFCREAdminController', ['filter' => 'authFilter']);
 $routes->post('get_CREPSFrecord_info', "PSFModule/PSFCREAdminController::get_CREPSFrecord_info", ['filter' => 'authFilter']);
 $routes->get('crmDailyPSFRoutineUpdate', "PSFModule/PSFController::crmDailyPSFRoutineUpdate", ['filter' => 'authFilter']);
-$routes->get('get_creDailyPSFCalls', "PSFModule/PSFCREAdminController::get_creDailyPSFCalls", ['filter' => 'authFilter']);
+$routes->post('get_creDailyPSFCalls', "PSFModule/PSFCREAdminController::get_creDailyPSFCalls", ['filter' => 'authFilter']);
 $routes->get('crmDailyPSFUpdateProcess', "PSFModule/PSFController::crmDailyPSFUpdate", ['filter' => 'authFilter']);
 $routes->get('get_crmDailyPSFCalls', "PSFModule/PSFController::get_crmDailyPSFCalls", ['filter' => 'authFilter']);
 $routes->get('get_PSFresponseMaster', "PSFModule/PSFController::get_PSFresponseMaster", ['filter' => 'authFilter']);
@@ -547,7 +573,10 @@ $routes->post('get7thDayPsfCallData', "PSFModule/PSFController::get7thDayPsfCall
 $routes->post('Leads/MobileLead', 'Leads\MobileLead::create');
 $routes->post('Leads/ExistCalllog', 'Leads\MobileLead::existcalllog');
 $routes->post('Leads/checkLeadstatus', 'Leads\MobileLead::checkleadstatus');
+$routes->post('updateCategoryOfLead', 'Leads\Lead::updateCategoryOfLead', ['filter' => 'authFilter']);
 
+// maintenance route
+$routes->resource('Maintenance/MaintenanceStatus');
 
 
 

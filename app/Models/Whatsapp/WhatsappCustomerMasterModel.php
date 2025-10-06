@@ -15,7 +15,7 @@ class WhatsappCustomerMasterModel extends Model
     protected $returnType       = 'array';
     protected $useSoftDeletes   = false;
     protected $protectFields    = true;
-    protected $allowedFields    = ['wb_cus_id', 'wb_cus_name', 'wb_cus_mobile', 'wb_cus_profile_pic', 'wb_cus_category', 'wb_cus_follow_up', 'wb_cus_follow_up_time', 'wb_cus_reminder', 'wb_cus_remind_date', 'wb_cus_remind_flag', 'wb_cus_pick_drop', 'wb_cus_pickup_mode', 'wb_cus_assigned', 'wb_cus_created_on', 'wb_cus_updated_on', 'wb_cus_block', 'wb_cus_delete_flag'];
+    protected $allowedFields    = ['wb_cus_id', 'wb_cus_name', 'wb_cus_mobile', 'wb_cus_profile_pic', 'wb_cus_category','wb_cus_lead_category', 'wb_cus_follow_up', 'wb_cus_follow_up_time', 'wb_cus_reminder', 'wb_cus_remind_date', 'wb_cus_remind_flag', 'wb_cus_pick_drop', 'wb_cus_pickup_mode', 'wb_cus_assigned', 'wb_cus_created_on', 'wb_cus_updated_on', 'wb_cus_block', 'wb_cus_delete_flag'];
 
 
     //     public function getCustomerWithLastMessageAndUnreadCount($offset, $limit)
@@ -104,6 +104,8 @@ class WhatsappCustomerMasterModel extends Model
             c.wb_cus_category,
             c.wb_cus_created_on,
             c.wb_cus_updated_on,
+            c.wb_cus_profile_pic,
+            c.wb_cus_lead_category,
             msg_summary.max_created_on,
             IFNULL(msg_summary.message_status_2_count, 0) AS message_status_2_count
         FROM 

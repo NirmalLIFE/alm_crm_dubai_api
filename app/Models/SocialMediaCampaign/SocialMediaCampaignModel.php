@@ -14,7 +14,7 @@ class SocialMediaCampaignModel extends Model
     protected $returnType       = 'array';
     protected $useSoftDeletes   = false;
     protected $protectFields    = true;
-    protected $allowedFields    = ['smc_id', 'smc_code', 'smc_ad_id', 'smc_name', 'smc_message', 'smc_status', 'smc_start_date', 'smc_end_date', 'smc_source', 'smc_owner','smc_created_on','smc_created_by','smc_updated_on','smc_updated_by', 'smc_delete_flag'];
+    protected $allowedFields    = ['smc_id', 'smc_code', 'smc_ad_id', 'smc_name', 'smc_message', 'smc_status', 'smc_start_date', 'smc_end_date', 'smc_source', 'smc_owner','smc_budget','smc_created_on','smc_created_by','smc_updated_on','smc_updated_by', 'smc_delete_flag'];
 
     // Dates
     protected $useTimestamps = false;

@@ -11,6 +11,7 @@ use CodeIgniter\RESTful\ResourceController;
 use Config\Common;
 use Config\Validation;
 use App\Models\Customer\CustomerMasterModel;
+use App\Models\Customer\MaraghiJobModel;
 
 
 class CustomerConversionReportController extends ResourceController
@@ -420,67 +421,71 @@ class CustomerConversionReportController extends ResourceController
         $dateFrom = $this->request->getVar('dateFrom');
         $dateTo = $this->request->getVar('dateTo');
         $source = $this->request->getVar('source');
+        $us_id  = $this->request->getVar('us_id');
 
-        $customers = $CustomerMasterModel->select('*, cust_data_laabs.*, cust_job_data_laabs.*, IF(cust_source = 0, "Existing", lead_source.ld_src) as ld_src, DATE(cust_created_on) as created_on')
-            ->join('cust_data_laabs', 'RIGHT(cust_data_laabs.phone,9) = RIGHT(cust_phone,9)')
-            ->join('cust_job_data_laabs', 'cust_job_data_laabs.customer_no = cust_data_laabs.customer_code')
-            ->join('lead_source', 'lead_source.ld_src_id = cust_source', 'left')
-            ->where('DATE(cust_created_on) >=', $dateFrom)
-            ->where('DATE(cust_created_on) <=', $dateTo)
-            ->where('STR_TO_DATE(cust_job_data_laabs.job_open_date, "%d-%b-%y") >= DATE(cust_created_on)', null)
-            ->orderBy('customer_master.cus_id', 'desc')
-            ->groupBy('RIGHT(cust_data_laabs.phone,9)');
+        $laabsJob = new MaraghiJobModel();
+        $customers = $laabsJob
+            // ->where("str_to_date(job_open_date, '%d-%M-%y')  >=", $this->request->getVar('dateFrom'))
+            // ->where("str_to_date(job_open_date, '%d-%M-%y')  <=", $this->request->getVar('dateTo'))
+            ->join('cust_data_laabs', 'cust_data_laabs.customer_code=cust_job_data_laabs.customer_no', 'left')
+            ->join('customer_master', 'customer_master.cust_alm_code=cust_job_data_laabs.customer_no', 'left')
+            ->orderby('job_no', "desc");
+        // ->findAll();
 
-        if ($source == 0) {
-            $customers = $customers->where('cust_source', 0);
-        } else {
-            $customers = $customers->where('cust_source !=', 0);
+        if ($us_id != 0) {
+            $customers->where('sa_emp_id', $us_id);
+        }
+        if (!empty($dateFrom)) {
+            $customers->where("str_to_date(job_open_date, '%d-%M-%y')  >=", $dateFrom);
+        }
+        if (!empty($dateTo)) {
+            $customers->where("str_to_date(job_open_date, '%d-%M-%y')  <=", $dateTo);
         }
 
         $customers = $customers->findAll();
 
 
-        $builder = $this->db->table('leads');
-        $builder->select('
-            lead_id, lead_code, customer_master.*, name, phone, vehicle_model, lead_note, source_id, 
-            DATE(lead_createdon) as lead_createdon, status_id, lead_source.ld_src, lead_status.ld_sts, 
-            users.us_firstname, ld_appoint_date, assigned, camp_name, ld_camp_id, ld_brand, 
-            us.us_firstname as created, call_purpose, purpose_id, ld_appoint_time, apptm_id
-        ');
-        $builder->join('customer_master', 'RIGHT(customer_master.cust_phone,9) = RIGHT(phone,9)');
-        $builder->join('users', 'users.us_id =assigned', 'left');
-        $builder->join('users as us', 'us.us_id =lead_createdby', 'left');
-        $builder->join('lead_status', 'lead_status.ld_sts_id =status_id', 'left');
-        $builder->join('lead_source', 'lead_source.ld_src_id =source_id', 'left');
-        $builder->join('call_purposes', 'call_purposes.cp_id =purpose_id', 'left');
-        $builder->join('campaign', 'campaign.camp_id =ld_camp_id', 'left');
-        $builder->join('appointment_master', 'appointment_master.apptm_lead_id =lead_id', 'left');
-        $builder->where('lead_delete_flag', 0);
-        $builder->where('status_id !=', 7);
-        $builder->where('DATE(lead_creted_date) >=', $dateFrom);
-        $builder->where('DATE(lead_creted_date) <=', $dateTo);
-        
-        if ($source == 0) {
-            $builder->where('cust_source', 0);
-        } else {
-            $builder->where('cust_source !=', 0);
+        $uniqueArray = $customers;
+        $job_cards = [];
+        $job_cards1 = [];
+
+
+        $startDate = $this->request->getVar('dateFrom');
+        $laabsJobs = $laabsJob->select('*')
+            ->where("str_to_date(job_open_date, '%d-%M-%y') <", $startDate)
+            ->where('job_status', 'INV')
+            ->orderby('job_no', "desc")
+            ->findAll();
+
+
+        $customerId = [];
+        foreach ($laabsJobs as $job) {
+            $customer_no = $job['customer_no'];
+            if (!isset($customerId[$customer_no])) {
+                $customerId[$customer_no] = [];
+            }
+            $customerId[$customer_no][] = $job;
         }
-        
-        $builder->orderBy('lead_id', 'desc');
-        $builder->limit(2000);
-        
-        $query = $builder->get();
-        $res = $query->getResultArray();
-        
+
+        foreach ($uniqueArray as &$temp) {
+            $customer_no = $temp['customer_no'];
+            $temp['old_jobcard'] = null;
+
+            if (isset($customerId[$customer_no])) {
+
+                $temp['old_jobcard'] = reset($customerId[$customer_no]);
+            }
 
 
+            array_push($job_cards, $temp);
+        }
 
+        $uniqueArray1 = $this->removeDuplicates($job_cards, 'customer_no');
 
         if (sizeof($customers) > 0) {
             $response = [
                 'ret_data' => 'success',
-                'customers' => $customers,
-                'leads' => $res,
+                'customers' => $uniqueArray1,
             ];
         } else {
             $response = [
@@ -488,5 +493,451 @@ class CustomerConversionReportController extends ResourceController
             ];
         }
         return $this->respond($response, 200);
+    }
+
+    public function removeDuplicates($array, $key)
+    {
+        $tempArray = [];
+        $uniqueArray = [];
+
+        foreach ($array as $val) {
+            if (!in_array($val[$key], $tempArray)) {
+                $tempArray[] = $val[$key];
+                $uniqueArray[] = $val;
+            }
+        }
+
+        return $uniqueArray;
+    }
+
+    public function fetchAllNewCustomers()
+    {
+        $common = new Common();
+        $valid = new Validation();
+
+        $heddata = $this->request->headers();
+        $tokendata = $common->decode_jwt_token($valid->getbearertoken($heddata['Authorization']));
+
+        if ($tokendata['aud'] == 'superadmin') {
+            $SuperModel = new SuperAdminModel();
+            $super = $SuperModel->where("s_adm_id", $tokendata['uid'])->first();
+            if (!$super) return $this->fail("invalid user", 400);
+        } else if ($tokendata['aud'] == 'user') {
+            $usmodel = new UserModel();
+            $user = $usmodel->where("us_id", $tokendata['uid'])->first();
+            if (!$user) return $this->fail("invalid user", 400);
+        } else {
+            $data['ret_data'] = "Invalid user";
+            return $this->fail($data, 400);
+        }
+        if ($tokendata) {
+            $laabsJob = new MaraghiJobModel();
+            $leadmodel = new LeadModel();
+
+            // new  leads then to  customer jobcards
+
+            // $dateFrom = $this->request->getVar('dateFrom'); // Example: "2025-03-01"
+            // $dateTo = $this->request->getVar('dateTo'); // Example: "2025-04-30"
+            // $sourceId = $this->request->getVar('sourceId'); // Source ID from request
+
+            // $leadsQuery = $leadmodel->select("leads.lead_id, leads.phone, leads.source_id, first_leads.lead_phone,leads.lead_createdon")
+            //     ->join("(
+            //     SELECT MIN(lead_id) as lead_id, SUBSTRING(phone, -9) as lead_phone
+            //     FROM leads
+            //     WHERE lead_delete_flag = 0
+            //         AND DATE(lead_createdon) >= '$dateFrom'
+            //         AND DATE(lead_createdon) <= '$dateTo'
+            //     GROUP BY lead_phone
+            // ) as first_leads", "first_leads.lead_id = leads.lead_id", "inner")
+            //     ->where("DATE(leads.lead_createdon) >=", $dateFrom)
+            //     ->where("DATE(leads.lead_createdon) <=", $dateTo)
+            //     ->where("leads.lead_delete_flag", 0);
+
+            // if (!empty($sourceId) && $sourceId != "0") {
+            //     $leadsQuery->where("leads.source_id", $sourceId);
+            // }
+
+            // $leadsSubQuery = $leadsQuery->getCompiledSelect();
+
+            // $oldCustomers = $laabsJob->select("customer_no")
+            //     ->where("STR_TO_DATE(job_open_date, '%d-%M-%y') <", $dateFrom)
+            //     ->groupBy("customer_no")
+            //     ->findAll();
+
+            // $oldCustomerIds = array_column($oldCustomers, 'customer_no');
+
+            // $newCustomersSubQuery = $laabsJob->select("customer_no, MIN(STR_TO_DATE(job_open_date, '%d-%M-%y')) as first_job_date")
+            //     ->where("STR_TO_DATE(job_open_date, '%d-%M-%y') >=", $dateFrom)
+            //     // ->where("STR_TO_DATE(job_open_date, '%d-%M-%y') <=", $dateTo)
+            //     ->groupBy("customer_no")
+            //     ->having("MIN(STR_TO_DATE(job_open_date, '%d-%M-%y')) >=", $dateFrom);
+
+            // if (!empty($oldCustomerIds)) {
+            //     $newCustomersSubQuery->whereNotIn("customer_no", $oldCustomerIds);
+            // }
+
+            // $newCustomersSubQuery = $newCustomersSubQuery->getCompiledSelect();
+
+            // $jobs_list = $laabsJob->select("cust_job_data_laabs.*, cust_data_laabs.*, leads.*")
+            //     ->join("cust_data_laabs", "cust_data_laabs.customer_code = cust_job_data_laabs.customer_no", "left")
+            //     ->join(
+            //         "($newCustomersSubQuery) as new_customers",
+            //         "new_customers.customer_no = cust_job_data_laabs.customer_no 
+            //         AND STR_TO_DATE(job_open_date, '%d-%M-%y') = new_customers.first_job_date",
+            //         "inner"
+            //     )
+            //     ->join(
+            //         "($leadsSubQuery) as first_leads",
+            //         "first_leads.lead_phone = SUBSTRING(cust_data_laabs.phone, -9)
+            //         AND STR_TO_DATE(job_open_date, '%d-%M-%y') >= DATE(first_leads.lead_createdon)",
+            //         "left"
+            //     )
+            //     ->join("leads", "leads.lead_id = first_leads.lead_id", "left")
+            //     ->orderBy("job_no", "desc")
+            //     ->groupBy("cust_job_data_laabs.customer_no")
+            //     ->findAll();
+
+
+            // new customer jobcards then to leads 
+
+            $dateFrom = $this->request->getVar('dateFrom');
+            $dateTo   = $this->request->getVar('dateTo');
+            $sourceId = $this->request->getVar('sourceId');
+
+            // Step 1: Get Old Customers
+            $oldCustomers = $laabsJob->select("customer_no")
+                ->where("STR_TO_DATE(job_open_date, '%d-%M-%y') <", $dateFrom)
+                ->groupBy("customer_no")
+                ->findAll();
+
+            $oldCustomerIds = array_column($oldCustomers, 'customer_no');
+            // log_message('error', 'First oldCustomerIds Result Array: ' . json_encode($oldCustomerIds));
+
+            // Step 2: Get New Customers
+            $newCustomersSubQuery = $laabsJob->select("customer_no, MIN(STR_TO_DATE(job_open_date, '%d-%M-%y')) as first_job_date")
+                ->where("STR_TO_DATE(job_open_date, '%d-%M-%y') >=", $dateFrom)
+                ->where("STR_TO_DATE(job_open_date, '%d-%M-%y') <=", $dateTo)
+                ->groupBy("customer_no")
+                ->having("MIN(STR_TO_DATE(job_open_date, '%d-%M-%y')) >=", $dateFrom);
+
+            if (!empty($oldCustomerIds)) {
+                $newCustomersSubQuery->whereNotIn("customer_no", $oldCustomerIds);
+            }
+
+
+            $newCustomersSubQuery = $newCustomersSubQuery->getCompiledSelect();
+            // log_message('error', 'First newCustomersSubQuery Result Array: ' . json_encode($newCustomersSubQuery));
+
+            // Step 3: Get First Leads (only first lead per phone, no source filter here)
+            $firstLeadsQuery = $leadmodel->select("MIN(lead_id) as first_lead_id, MIN(lead_createdon) as first_lead_on, SUBSTRING(phone, -9) as lead_phone")
+                ->where("lead_delete_flag", 0)
+                ->where('lead_createdon IS NOT NULL', null, false)
+                ->where('status_id <>', 7)
+                ->groupBy("lead_phone");
+
+            // $firstLeadsResult = $firstLeadsQuery->get()->getResultArray();
+            // log_message('error', 'First Leads Result Array: ' . json_encode($firstLeadsResult));
+
+            $firstLeadsSubQuery = $firstLeadsQuery->getCompiledSelect();
+
+            // Step 4: Fetch New Customers with First Lead + Apply Source ID here
+            $jobs_list = $laabsJob->select("cust_job_data_laabs.*, cust_data_laabs.*, leads.*,cust_data_laabs.phone as cphone")
+                ->join("cust_data_laabs", "cust_data_laabs.customer_code = cust_job_data_laabs.customer_no", "left")
+                ->join("($newCustomersSubQuery) as new_customers", "new_customers.customer_no = cust_job_data_laabs.customer_no 
+                AND STR_TO_DATE(cust_job_data_laabs.job_open_date, '%d-%b-%y') = new_customers.first_job_date", "inner")
+                ->join("($firstLeadsSubQuery) as first_leads", "first_leads.lead_phone = SUBSTRING(cust_data_laabs.phone, -9)", "left")
+                ->join("leads", "leads.lead_id = first_leads.first_lead_id AND DATE(leads.lead_createdon) <= STR_TO_DATE(cust_job_data_laabs.job_open_date, '%d-%b-%y')", "left");
+            // ->join("leads", "leads.lead_id = first_leads.first_lead_id", "left")
+            // ->where("leads.lead_id IS NOT NULL");
+
+            if (!empty($sourceId) && $sourceId != "0") {
+                $jobs_list->where("leads.source_id", $sourceId);
+            }
+
+            $jobs_list = $jobs_list->orderBy("job_no", "desc")
+                ->findAll();
+
+
+
+            $involdCustomers = $laabsJob->select("customer_no")
+                ->where("STR_TO_DATE(invoice_date, '%d-%M-%y') <", $dateFrom)
+                ->groupBy("customer_no")
+                ->findAll();
+
+            $involdCustomerIds = array_column($involdCustomers, 'customer_no');
+            // log_message('error', 'First oldCustomerIds Result Array: ' . json_encode($involdCustomerIds));
+
+            // Step 2: Get New Customers
+            $invnewCustomersSubQuery = $laabsJob->select("customer_no, MIN(STR_TO_DATE(invoice_date, '%d-%M-%y')) as first_job_date")
+                ->where("STR_TO_DATE(invoice_date, '%d-%M-%y') >=", $dateFrom)
+                ->where("STR_TO_DATE(invoice_date, '%d-%M-%y') <=", $dateTo)
+                ->groupBy("customer_no")
+                ->having("MIN(STR_TO_DATE(invoice_date, '%d-%M-%y')) >=", $dateFrom);
+
+            if (!empty($involdCustomerIds)) {
+                $invnewCustomersSubQuery->whereNotIn("customer_no", $involdCustomerIds);
+            }
+
+
+            $invnewCustomersSubQuery = $invnewCustomersSubQuery->getCompiledSelect();
+            // log_message('error', 'First invnewCustomersSubQuery  invnewCustomersSubQuery  invnewCustomersSubQuery  Result Array: ' . json_encode($invnewCustomersSubQuery));
+
+            // Step 3: Get First Leads (only first lead per phone, no source filter here)
+            $invfirstLeadsQuery = $leadmodel->select("MIN(lead_id) as first_lead_id, MIN(lead_createdon) as first_lead_on, SUBSTRING(phone, -9) as lead_phone")
+                ->where("lead_delete_flag", 0)
+                ->where('lead_createdon IS NOT NULL', null, false)
+                ->where('status_id <>', 7)
+                ->groupBy("lead_phone");
+
+            // $firstLeadsResult = $firstLeadsQuery->get()->getResultArray();
+            // log_message('error', 'First Leads Result Array: ' . json_encode($firstLeadsResult));
+
+            $invfirstLeadsQuery = $invfirstLeadsQuery->getCompiledSelect();
+
+            // Step 4: Fetch New Customers with First Lead + Apply Source ID here
+            $inv_jobs_list = $laabsJob->select("cust_job_data_laabs.*, cust_data_laabs.*, leads.*,cust_data_laabs.phone as cphone, IF(appointment_log.applg_id IS NOT NULL, 1, 0) AS cust_flag_mismatch")
+                ->join("cust_data_laabs", "cust_data_laabs.customer_code = cust_job_data_laabs.customer_no", "left")
+                ->join("($invnewCustomersSubQuery) as new_customers", "new_customers.customer_no = cust_job_data_laabs.customer_no 
+                AND STR_TO_DATE(cust_job_data_laabs.invoice_date, '%d-%b-%y') = new_customers.first_job_date", "inner")
+                ->join("($invfirstLeadsQuery) as first_leads", "first_leads.lead_phone = SUBSTRING(cust_data_laabs.phone, -9)", "left")
+                ->join("leads", "leads.lead_id = first_leads.first_lead_id AND DATE(leads.lead_createdon) <= STR_TO_DATE(cust_job_data_laabs.invoice_date, '%d-%b-%y')", "left")
+                ->join("appointment_log","appointment_log.applg_job_no = cust_job_data_laabs.job_no","left")
+                ->groupBy("new_customers.customer_no");
+            // ->join("leads", "leads.lead_id = first_leads.first_lead_id", "left")
+            // ->where("leads.lead_id IS NOT NULL");
+
+            if (!empty($sourceId) && $sourceId != "0") {
+                $inv_jobs_list->where("leads.source_id", $sourceId);
+            }
+
+            $inv_jobs_list = $inv_jobs_list->orderBy("job_no", "desc")
+                ->findAll();
+
+
+
+
+
+
+            // $dateFrom = $this->request->getVar('dateFrom'); // Example: "2025-03-01"
+            // $dateTo = $this->request->getVar('dateTo'); // Example: "2025-04-30"
+            // $sourceId = $this->request->getVar('sourceId'); // Source ID from request
+
+            // // ✅ Step 1: Get Old Customers (customers with jobs before $dateFrom)
+            // $oldCustomers = $laabsJob->select("customer_no")
+            //     ->where("STR_TO_DATE(job_open_date, '%d-%M-%y') <", $dateFrom)
+            //     ->groupBy("customer_no")
+            //     ->findAll();
+
+            // // Extract old customer IDs into an array
+            // $oldCustomerIds = array_column($oldCustomers, 'customer_no');
+
+            // // ✅ Step 2: Get New Customers (first job falls inside the date range)
+            // $newCustomersSubQuery = $laabsJob->select("customer_no, MIN(STR_TO_DATE(job_open_date, '%d-%M-%y')) as first_job_date")
+            //     ->where("STR_TO_DATE(job_open_date, '%d-%M-%y') >=", $dateFrom)
+            //     ->where("STR_TO_DATE(job_open_date, '%d-%M-%y') <=", $dateTo)
+            //     ->groupBy("customer_no")
+            //     ->having("MIN(STR_TO_DATE(job_open_date, '%d-%M-%y')) >=", $dateFrom); // ✅ First job must be in range
+
+            // // ✅ Step 3: Exclude Old Customers
+            // if (!empty($oldCustomerIds)) {
+            //     $newCustomersSubQuery->whereNotIn("customer_no", $oldCustomerIds);
+            // }
+
+            // // Compile the subquery
+            // $newCustomersSubQuery = $newCustomersSubQuery->getCompiledSelect();
+
+            // // ✅ Step 4: Get First Lead for Each Customer (Matching Last 9 Digits of Phone)
+            // $firstLeadsQuery = $leadmodel->select("MIN(lead_id) as first_lead_id, SUBSTRING(phone, -9) as lead_phone")
+            //     ->where("lead_delete_flag", 0);
+
+            // // ✅ Step 5: Apply `source_id` filter **only if it's not 0**
+            // if (!empty($sourceId) && $sourceId != "0") {
+            //     $firstLeadsQuery->where("source_id", $sourceId);
+            // }
+
+            // $firstLeadsSubQuery = $firstLeadsQuery->groupBy("lead_phone")->getCompiledSelect();
+
+            // // ✅ Step 6: Fetch New Customers, Their First Job, and First Lead (Filtered by `source_id`)
+            // $jobs_list = $laabsJob->select("cust_job_data_laabs.*, cust_data_laabs.*, leads.*")
+            //     ->join("cust_data_laabs", "cust_data_laabs.customer_code = cust_job_data_laabs.customer_no", "left")
+            //     ->join("($newCustomersSubQuery) as new_customers", "new_customers.customer_no = cust_job_data_laabs.customer_no 
+            //     AND STR_TO_DATE(job_open_date, '%d-%M-%y') = new_customers.first_job_date", "inner")
+            //     ->join("($firstLeadsSubQuery) as first_leads", "first_leads.lead_phone = SUBSTRING(cust_data_laabs.phone, -9)", "left") // ✅ Match last 9 digits
+            //     ->join("leads", "leads.lead_id = first_leads.first_lead_id", "left") // ✅ Get first lead details
+            //     ->orderBy("job_no", "desc")
+            //     ->findAll();
+
+
+
+            // $dateFrom = $this->request->getVar('dateFrom'); // Example: "2025-03-01"
+            // $dateTo = $this->request->getVar('dateTo'); // Example: "2025-04-30"
+
+            // // ✅ Step 1: Get all customers who have jobs before $dateFrom (Old Customers)
+            // $oldCustomers = $laabsJob->select("customer_no")
+            //     ->where("STR_TO_DATE(job_open_date, '%d-%M-%y') <", $dateFrom)
+            //     ->groupBy("customer_no")
+            //     ->findAll();
+
+            // // Extract old customer IDs into an array
+            // $oldCustomerIds = array_column($oldCustomers, 'customer_no');
+
+            // // ✅ Step 2: Get customers whose first-ever job falls inside the range (New Customers)
+            // $newCustomersSubQuery = $laabsJob->select("customer_no, MIN(STR_TO_DATE(job_open_date, '%d-%M-%y')) as first_job_date")
+            //     ->where("STR_TO_DATE(job_open_date, '%d-%M-%y') >=", $dateFrom)
+            //     ->where("STR_TO_DATE(job_open_date, '%d-%M-%y') <=", $dateTo)
+            //     ->groupBy("customer_no")
+            //     ->having("MIN(STR_TO_DATE(job_open_date, '%d-%M-%y')) >=", $dateFrom); // ✅ First job must be in range
+
+            // // ✅ Step 3: Exclude Old Customers
+            // if (!empty($oldCustomerIds)) {
+            //     $newCustomersSubQuery->whereNotIn("customer_no", $oldCustomerIds); // ✅ Now it works!
+            // }
+
+            // // Compile the subquery
+            // $newCustomersSubQuery = $newCustomersSubQuery->getCompiledSelect();
+
+            // // ✅ Step 4: Get details of the first job for new customers
+            // $jobs_list = $laabsJob->select("cust_job_data_laabs.*, cust_data_laabs.*")
+            //     ->join("cust_data_laabs", "cust_data_laabs.customer_code = cust_job_data_laabs.customer_no", "left")
+            //     ->join("($newCustomersSubQuery) as new_customers", "new_customers.customer_no = cust_job_data_laabs.customer_no 
+            //     AND STR_TO_DATE(job_open_date, '%d-%M-%y') = new_customers.first_job_date", "inner")
+            //     ->orderBy("job_no", "desc")
+            //     ->findAll();
+
+
+
+
+            if (sizeof($jobs_list) > 0) {
+                $response = [
+                    'ret_data' => 'success',
+                    'customers' => $jobs_list,
+                    'invCustomers' => $inv_jobs_list
+                ];
+            } else {
+                $response = [
+                    'ret_data' => 'fail',
+                ];
+            }
+            return $this->respond($response, 200);
+        }
+    }
+
+    public function fetchAllNewCustomerLeads()
+    {
+        $common = new Common();
+        $valid = new Validation();
+
+        $heddata = $this->request->headers();
+        $tokendata = $common->decode_jwt_token($valid->getbearertoken($heddata['Authorization']));
+
+        if ($tokendata['aud'] == 'superadmin') {
+            $SuperModel = new SuperAdminModel();
+            $super = $SuperModel->where("s_adm_id", $tokendata['uid'])->first();
+            if (!$super) return $this->fail("invalid user", 400);
+        } else if ($tokendata['aud'] == 'user') {
+            $usmodel = new UserModel();
+            $user = $usmodel->where("us_id", $tokendata['uid'])->first();
+            if (!$user) return $this->fail("invalid user", 400);
+        } else {
+            $data['ret_data'] = "Invalid user";
+            return $this->fail($data, 400);
+        }
+        if ($tokendata) {
+            $laabsJob = new MaraghiJobModel();
+            $leadmodel = new LeadModel();
+            $marcustmodel = new MaragiCustomerModel();
+
+
+            $dateFrom = $this->request->getVar('dateFrom');
+            $dateTo   = $this->request->getVar('dateTo');
+            $sourceId = $this->request->getVar('sourceId');
+
+            // Step 1: Get Old Customers' Phones
+            $oldCustomers = $laabsJob->select("cust_data_laabs.phone")
+                ->join("cust_data_laabs", "cust_data_laabs.customer_code = cust_job_data_laabs.customer_no", "left")
+                ->where("STR_TO_DATE(job_open_date, '%d-%M-%y') <", $dateFrom)
+                ->groupBy("cust_data_laabs.phone")
+                ->findAll();
+
+            // Extract last 9 digits of old phones
+            $oldPhones9Digits = array_filter(array_map(function ($row) {
+                return isset($row['phone']) ? substr(preg_replace('/\D/', '', $row['phone']), -9) : null;
+            }, $oldCustomers));
+
+            // Step 2: Get New Customers
+            $newCustomersSubQuery = $laabsJob->select("
+             customer_no,
+             car_reg_no,
+             job_status,
+             MIN(STR_TO_DATE(job_open_date, '%d-%M-%y')) as first_job_date,
+             cust_data_laabs.phone,
+             cust_data_laabs.customer_name
+             ")
+                ->join("cust_data_laabs", "cust_data_laabs.customer_code = cust_job_data_laabs.customer_no", "left")
+                ->where("STR_TO_DATE(job_open_date, '%d-%M-%y') >=", $dateFrom)
+                ->where("STR_TO_DATE(job_open_date, '%d-%M-%y') <=", $dateTo)
+                ->groupBy("customer_no, cust_data_laabs.phone")
+                ->having("MIN(STR_TO_DATE(job_open_date, '%d-%M-%y')) >=", $dateFrom);
+
+            $compiledNewCustomers = $newCustomersSubQuery->getCompiledSelect();
+
+            // Step 3: Join leads with new customers by last 9 digits of phone
+            $db = \Config\Database::connect();
+            $builder = $db->table("leads");
+
+            $builder->select("
+             leads.*,
+             leads.phone AS lead_phone,
+             SUBSTRING(leads.phone, -9) AS short_lead_phone,
+             new_custs.customer_no,
+             new_custs.phone AS cust_phone,
+             SUBSTRING(new_custs.phone, -9) AS short_cust_phone,
+             new_custs.first_job_date,
+             new_custs.car_reg_no,
+             new_custs.job_status,
+             new_custs.customer_name,
+             lead_call_log.*,
+             alm_whatsapp_customers.wb_cus_lead_category,
+            ");
+
+            $builder->join(
+                "($compiledNewCustomers) AS new_custs",
+                "SUBSTRING(leads.phone, -9) = SUBSTRING(new_custs.phone, -9) AND new_custs.first_job_date >= DATE(leads.lead_createdon)",
+                "left"
+            );
+            $builder->join("lead_call_log", "lead_call_log.lcl_lead_id = leads.lead_id", "left");
+            $builder->join("alm_whatsapp_customers", "SUBSTRING(alm_whatsapp_customers.wb_cus_mobile , -9) = SUBSTRING(leads.phone, -9)", "left");
+            $builder->groupBy("leads.phone");
+
+            // Exclude leads that match any old customer phone (last 9 digits)
+            if (!empty($oldPhones9Digits)) {
+                $builder->whereNotIn("SUBSTRING(leads.phone, -9)", $oldPhones9Digits);
+            }
+
+            $builder->where('leads.lead_delete_flag', 0);
+            $builder->where('DATE(leads.lead_createdon) >=', $dateFrom);
+            $builder->where('DATE(leads.lead_createdon) <=', $dateTo);
+
+            if (!empty($sourceId) && $sourceId !== '0') {
+                $builder->where('leads.source_id', $sourceId);
+            }
+
+            $results = $builder->get()->getResult();
+
+
+
+
+            if (sizeof($results) > 0) {
+                $response = [
+                    'ret_data' => 'success',
+                    'customers' => $results,
+                ];
+            } else {
+                $response = [
+                    'ret_data' => 'fail',
+                ];
+            }
+            return $this->respond($response, 200);
+        }
     }
 }

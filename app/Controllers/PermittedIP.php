@@ -18,7 +18,7 @@ class PermittedIP extends ResourceController
         $this->db = \Config\Database::connect();
     }
 
-      /**
+    /**
      * @api {get} permittedIP  IP list
      * @apiName IP list
      * @apiGroup IP
@@ -30,51 +30,48 @@ class PermittedIP extends ResourceController
      * @apiError (500 Internal Server Error) InternalServerError The server encountered an internal error
      *
      *
-     */ 
+     */
     public function index()
     {
         $model = new PermittedIPModel();
-        $common =new Common();
-        $valid=new Validation();        
+        $common = new Common();
+        $valid = new Validation();
 
-        $heddata=$this->request->headers();
-        $tokendata=$common->decode_jwt_token($valid->getbearertoken($heddata['Authorization']));  
-        if($tokendata['aud']=='superadmin'){
+        $heddata = $this->request->headers();
+        $tokendata = $common->decode_jwt_token($valid->getbearertoken($heddata['Authorization']));
+        if ($tokendata['aud'] == 'superadmin') {
             $SuperModel = new SuperAdminModel();
             $super = $SuperModel->where("s_adm_id", $this->db->escapeString($tokendata['uid']))->first();
-            if(!$super) return $this->fail("invalid user",400);        
-        }else if($tokendata['aud']=='user'){
+            if (!$super) return $this->fail("invalid user", 400);
+        } else if ($tokendata['aud'] == 'user') {
             $usmodel = new UserModel();
             $user = $usmodel->where("us_id", $this->db->escapeString($tokendata['uid']))->first();
-            if(!$user) return $this->fail("invalid user",400); 
+            if (!$user) return $this->fail("invalid user", 400);
+        } else {
+            $data['ret_data'] = "Invalid user";
+            return $this->fail($data, 400);
         }
-        else{          
-            $data['ret_data']="Invalid user";
-            return $this->fail($data,400);
-        }
-        if($tokendata['aud']=='superadmin' || $tokendata['aud']=='user'){
+        if ($tokendata['aud'] == 'superadmin' || $tokendata['aud'] == 'user') {
 
-            $res= $model->where('pip_delete_flag', 0)->orderBy('pip_id','desc')->select('pip_id,pip_address,pip_reason,ip_source_type,pip_created_on,pip_updated_on')->findAll();
-            $this->insertUserLog('View IP List',$tokendata['uid']);
-            if($res)
-            {
+            $res = $model->where('pip_delete_flag', 0)->orderBy('pip_id', 'desc')->select('pip_id,pip_address,pip_reason,ip_source_type,pip_created_on,pip_updated_on')->findAll();
+            $this->insertUserLog('View IP List', $tokendata['uid']);
+            if ($res) {
                 $response = [
-                    'ret_data'=>'success',
-                    'iplist'=>$res
+                    'ret_data' => 'success',
+                    'iplist' => $res
                 ];
-                return $this->respond($response,200);
-            }else{
+                return $this->respond($response, 200);
+            } else {
                 $response = [
-                    'ret_data'=>'success',
-                    'iplist'=>[]
+                    'ret_data' => 'success',
+                    'iplist' => []
                 ];
-                return $this->respond($response,200); 
+                return $this->respond($response, 200);
             }
-
         }
     }
 
-   /**
+    /**
      * @api {get}permittedIP/:id  IP by  id
      * @apiName IP by  id
      * @apiGroup IP
@@ -89,43 +86,40 @@ class PermittedIP extends ResourceController
      */
     public function show($id = null)
     {
-        
-        $model = new PermittedIPModel();
-        $common =new Common();
-        $valid=new Validation();        
 
-        $heddata=$this->request->headers();
-        $tokendata=$common->decode_jwt_token($valid->getbearertoken($heddata['Authorization']));  
-        if($tokendata['aud']=='superadmin'){
+        $model = new PermittedIPModel();
+        $common = new Common();
+        $valid = new Validation();
+
+        $heddata = $this->request->headers();
+        $tokendata = $common->decode_jwt_token($valid->getbearertoken($heddata['Authorization']));
+        if ($tokendata['aud'] == 'superadmin') {
             $SuperModel = new SuperAdminModel();
             $super = $SuperModel->where("s_adm_id", $this->db->escapeString($tokendata['uid']))->first();
-            if(!$super) return $this->fail("invalid user",400);        
-        }else if($tokendata['aud']=='user'){
+            if (!$super) return $this->fail("invalid user", 400);
+        } else if ($tokendata['aud'] == 'user') {
             $usmodel = new UserModel();
             $user = $usmodel->where("us_id", $this->db->escapeString($tokendata['uid']))->first();
-            if(!$user) return $this->fail("invalid user",400); 
+            if (!$user) return $this->fail("invalid user", 400);
+        } else {
+            $data['ret_data'] = "Invalid user";
+            return $this->fail($data, 400);
         }
-        else{          
-            $data['ret_data']="Invalid user";
-            return $this->fail($data,400);
-        }
-        if($tokendata['aud']=='superadmin' || $tokendata['aud']=='user'){
-            $res = $model->where('pip_id ',$this->db->escapeString($id))->select('pip_id,pip_address,pip_reason,ip_source_type,pip_created_on,pip_updated_on')->first();
-            if($res)
-            {
-                $this->insertUserLog('View IP data For Update',$tokendata['uid']);
+        if ($tokendata['aud'] == 'superadmin' || $tokendata['aud'] == 'user') {
+            $res = $model->where('pip_id ', $this->db->escapeString($id))->select('pip_id,pip_address,pip_reason,ip_source_type,pip_created_on,pip_updated_on')->first();
+            if ($res) {
+                $this->insertUserLog('View IP data For Update', $tokendata['uid']);
                 $response = [
-                    'ret_data'=>'success',
-                    'iplist'=>$res
+                    'ret_data' => 'success',
+                    'iplist' => $res
                 ];
-                return $this->respond($response,200);
-            }
-            else{
+                return $this->respond($response, 200);
+            } else {
                 $response = [
-                    'ret_data'=>'fail',
-                    'iplist'=>[]
+                    'ret_data' => 'fail',
+                    'iplist' => []
                 ];
-                return $this->respond($response,200);
+                return $this->respond($response, 200);
             }
         }
     }
@@ -156,67 +150,70 @@ class PermittedIP extends ResourceController
     public function create()
     {
         $model = new PermittedIPModel();
-        $common =new Common();
-        $valid=new Validation();        
+        $common = new Common();
+        $valid = new Validation();
 
-        $heddata=$this->request->headers();
-        $tokendata=$common->decode_jwt_token($valid->getbearertoken($heddata['Authorization']));  
-        if($tokendata['aud']=='superadmin'){
+        $heddata = $this->request->headers();
+        $tokendata = $common->decode_jwt_token($valid->getbearertoken($heddata['Authorization']));
+        if ($tokendata['aud'] == 'superadmin') {
             $SuperModel = new SuperAdminModel();
             $super = $SuperModel->where("s_adm_id", $this->db->escapeString($tokendata['uid']))->first();
-            if(!$super) return $this->fail("invalid user",400);        
-        }else if($tokendata['aud']=='user'){
+            if (!$super) return $this->fail("invalid user", 400);
+        } else if ($tokendata['aud'] == 'user') {
             $usmodel = new UserModel();
             $user = $usmodel->where("us_id", $this->db->escapeString($tokendata['uid']))->first();
-            if(!$user) return $this->fail("invalid user",400); 
+            if (!$user) return $this->fail("invalid user", 400);
+        } else {
+            $data['ret_data'] = "Invalid user";
+            return $this->fail($data, 400);
         }
-        else{          
-            $data['ret_data']="Invalid user";
-            return $this->fail($data,400);
-        }
-        if($tokendata['aud']=='superadmin' || $tokendata['aud']=='user'){
+        if ($tokendata['aud'] == 'superadmin' || $tokendata['aud'] == 'user') {
 
             $rules = [
-                'ip'=>'required', 
+                'ip' => 'required',
             ];
-            if(!$this->validate($rules)) return $this->fail($this->validator->getErrors());
-            $ip=$this->request->getVar('ip');
-            if(!filter_var($ip,FILTER_VALIDATE_IP))
-            {
+            if (!$this->validate($rules)) return $this->fail($this->validator->getErrors());
+            $ip = $this->request->getVar('ip');
+            // 🔑 Duplicate check
+            $exists = $model->where('pip_address', $ip)->where('pip_delete_flag', 0)->first();
+            if ($exists) {
+                $response = [
+                    'msg' => "IP already exists",
+                    'ret_data' => 'fail'
+                ];
+                return $this->respond($response, 200);
+            }
+
+            if (!filter_var($ip, FILTER_VALIDATE_IP)) {
                 $response = [
                     'msg' => "Invalid IP",
                     'ret_data' => 'fail'
                 ];
-               
+
                 return $this->respond($response);
             }
-            else{
-                $data = [
-                    'pip_address' => $this->request->getVar('ip'),
-                    'pip_reason' => $this->request->getVar('reason'), 
-                    'ip_source_type'=>'Manual',
-                    'pip_created_by' => $tokendata['uid']             
-                ];
-                $id = $model->insert($data);
-                if (!$id) 
-                 {
-                    $response = [
-                        'errors' => $model->errors(),
-                        'ret_data' => 'fail',
-                        'msg' => "Some error occurred please try again",
-                        'data'=>[]
-                    ];
-    
-                    return $this->respond($response, 200);
-                }
-                else{
-                    $this->insertUserLog('Create New IP '.$this->request->getVar('ip'),$tokendata['uid']);
-                    $data = $model->where('pip_id ',$id)->select('pip_id,pip_address,pip_reason,ip_source_type,pip_created_on,pip_updated_on')->first();
-                    return $this->respond(['ret_data' => 'success', 'data'=>$data], 200);
-                }
-            }
-         
 
+            $data = [
+                'pip_address' => $this->request->getVar('ip'),
+                'pip_reason' => $this->request->getVar('reason'),
+                'ip_source_type' => 'Manual',
+                'pip_created_by' => $tokendata['uid']
+            ];
+            $id = $model->insert($data);
+            if (!$id) {
+                $response = [
+                    'errors' => $model->errors(),
+                    'ret_data' => 'fail',
+                    'msg' => "Some error occurred please try again",
+                    'data' => []
+                ];
+
+                return $this->respond($response, 200);
+            } else {
+                $this->insertUserLog('Create New IP ' . $this->request->getVar('ip'), $tokendata['uid']);
+                $data = $model->where('pip_id ', $id)->select('pip_id,pip_address,pip_reason,ip_source_type,pip_created_on,pip_updated_on')->first();
+                return $this->respond(['ret_data' => 'success', 'data' => $data], 200);
+            }
         }
     }
 
@@ -225,12 +222,9 @@ class PermittedIP extends ResourceController
      *
      * @return mixed
      */
-    public function edit($id = null)
-    {
-        
-    }
+    public function edit($id = null) {}
 
-   /**
+    /**
      * @api {post} permittedIP/update IP Update
      * @apiName IP Update
      * @apiGroup IP
@@ -246,36 +240,48 @@ class PermittedIP extends ResourceController
     public function update($id = null)
     {
         $model = new PermittedIPModel();
-        $common =new Common();
-        $valid=new Validation();        
+        $common = new Common();
+        $valid = new Validation();
 
-        $heddata=$this->request->headers();
-        $tokendata=$common->decode_jwt_token($valid->getbearertoken($heddata['Authorization']));  
-        if($tokendata['aud']=='superadmin'){
+        $heddata = $this->request->headers();
+        $tokendata = $common->decode_jwt_token($valid->getbearertoken($heddata['Authorization']));
+        if ($tokendata['aud'] == 'superadmin') {
             $SuperModel = new SuperAdminModel();
             $super = $SuperModel->where("s_adm_id", $this->db->escapeString($tokendata['uid']))->first();
-            if(!$super) return $this->fail("invalid user",400);        
-        }else if($tokendata['aud']=='user'){
+            if (!$super) return $this->fail("invalid user", 400);
+        } else if ($tokendata['aud'] == 'user') {
             $usmodel = new UserModel();
             $user = $usmodel->where("us_id", $this->db->escapeString($tokendata['uid']))->first();
-            if(!$user) return $this->fail("invalid user",400); 
+            if (!$user) return $this->fail("invalid user", 400);
+        } else {
+            $data['ret_data'] = "Invalid user";
+            return $this->fail($data, 400);
         }
-        else{          
-            $data['ret_data']="Invalid user";
-            return $this->fail($data,400);
-        }
-        if($tokendata['aud']=='superadmin' || $tokendata['aud']=='user'){
+        if ($tokendata['aud'] == 'superadmin' || $tokendata['aud'] == 'user') {
             $rules = [
-                'ip'=>'required', 
+                'ip' => 'required',
             ];
-            if(!$this->validate($rules)) return $this->fail($this->validator->getErrors());
+
+            // 🔑 Duplicate check
+            $ip = $this->request->getVar('ip');
+            $exists = $model->where('pip_address', $ip)->where('pip_delete_flag', 0)->first();
+            if ($exists) {
+                $response = [
+                    'msg' => "IP already exists",
+                    'ret_data' => 'fail'
+                ];
+                return $this->respond($response, 200);
+            }
+
+            if (!$this->validate($rules)) return $this->fail($this->validator->getErrors());
             $data = [
                 'pip_address' => $this->request->getVar('ip'),
-                'pip_reason' => $this->request->getVar('reason'), 
-                'ip_source_type'=>'Manual',
-                'pip_updated_by' => $tokendata['uid']             
+                'pip_reason' => $this->request->getVar('reason'),
+                'ip_source_type' => 'Manual',
+                'pip_updated_by' => $tokendata['uid'],
+                'pip_updated_on' => date('Y-m-d H:i:s'),
             ];
-            if ( $model->where('pip_id',  $this->db->escapeString($this->request->getVar('id')))->set($data)->update() === false) {
+            if ($model->where('pip_id',  $this->db->escapeString($this->request->getVar('pip_id')))->set($data)->update() === false) {
 
                 $response = [
                     'errors' => $model->errors(),
@@ -283,16 +289,12 @@ class PermittedIP extends ResourceController
                 ];
 
                 return $this->respond($response, 200);
+            } else {
+                $this->insertUserLog('Update IP ' . $this->request->getVar('ip'), $tokendata['uid']);
+                $dataa = $model->where('pip_id ', $this->db->escapeString($this->request->getVar('pip_id')))->select('pip_id,pip_address,pip_reason,ip_source_type,pip_created_on,pip_updated_on')->first();
+                return $this->respond(['ret_data' => 'success', 'data' => $dataa], 200);
             }
-            else{
-                $this->insertUserLog('Update IP '.$this->request->getVar('ip'),$tokendata['uid']);
-                $dataa = $model->where('pip_id ',$this->db->escapeString($this->request->getVar('id')))->select('pip_id,pip_address,pip_reason,ip_source_type,pip_created_on,pip_updated_on')->first();
-                return $this->respond(['ret_data' => 'success','data'=> $dataa], 200);
-            }
-
-
         }
-        
     }
 
     /**
@@ -312,88 +314,124 @@ class PermittedIP extends ResourceController
     public function delete($id = null)
     {
         $model = new PermittedIPModel();
-        $common =new Common();
-        $valid=new Validation();        
+        $common = new Common();
+        $valid = new Validation();
 
-        $heddata=$this->request->headers();
-        $tokendata=$common->decode_jwt_token($valid->getbearertoken($heddata['Authorization']));  
-        if($tokendata['aud']=='superadmin'){
+        $heddata = $this->request->headers();
+        $tokendata = $common->decode_jwt_token($valid->getbearertoken($heddata['Authorization']));
+        if ($tokendata['aud'] == 'superadmin') {
             $SuperModel = new SuperAdminModel();
             $super = $SuperModel->where("s_adm_id", $this->db->escapeString($tokendata['uid']))->first();
-            if(!$super) return $this->fail("invalid user",400);        
-        }else if($tokendata['aud']=='user'){
+            if (!$super) return $this->fail("invalid user", 400);
+        } else if ($tokendata['aud'] == 'user') {
             $usmodel = new UserModel();
             $user = $usmodel->where("us_id", $this->db->escapeString($tokendata['uid']))->first();
-            if(!$user) return $this->fail("invalid user",400); 
+            if (!$user) return $this->fail("invalid user", 400);
+        } else {
+            $data['ret_data'] = "Invalid user";
+            return $this->fail($data, 400);
         }
-        else{          
-            $data['ret_data']="Invalid user";
-            return $this->fail($data,400);
-        }
-        if($tokendata['aud']=='superadmin' || $tokendata['aud']=='user'){
-           
+        if ($tokendata['aud'] == 'superadmin' || $tokendata['aud'] == 'user') {
+
             $data = [
-                'pip_delete_flag' => 1,                
+                'pip_delete_flag' => 1,
             ];
-           if($model->where('pip_id',  $this->db->escapeString($id))->set($data)->update() === false )
-            {
+            if ($model->where('pip_id',  $this->db->escapeString($id))->set($data)->update() === false) {
                 $response = [
                     'errors' => $model->errors(),
                     'ret_data' => 'fail'
                 ];
 
                 return $this->respond($response, 200);
-            }
-            else
-            {
-                $this->insertUserLog('IP Deleted ',$tokendata['uid']);
+            } else {
+                $this->insertUserLog('IP Deleted ', $tokendata['uid']);
                 $response = [
                     'ret_data' => 'success'
                 ];
                 return $this->respond($response, 200);
-
             }
         }
     }
     public function getPermittedIps()
     {
-        $common =new Common();
-        $valid=new Validation();        
+        $common = new Common();
+        $valid = new Validation();
 
-        $heddata=$this->request->headers();
-        $tokendata=$common->decode_jwt_token($valid->getbearertoken($heddata['Authorization']));
-        if($tokendata['aud']=='superadmin'){
+        $heddata = $this->request->headers();
+        $tokendata = $common->decode_jwt_token($valid->getbearertoken($heddata['Authorization']));
+        if ($tokendata['aud'] == 'superadmin') {
             $SuperModel = new SuperAdminModel();
             $super = $SuperModel->where("s_adm_id", $this->db->escapeString($tokendata['uid']))->first();
-            if(!$super) return $this->fail("invalid user",400);        
-        }else if($tokendata['aud']=='user'){
+            if (!$super) return $this->fail("invalid user", 400);
+        } else if ($tokendata['aud'] == 'user') {
             $usmodel = new UserModel();
             $user = $usmodel->where("us_id", $this->db->escapeString($tokendata['uid']))->first();
-            if(!$user) return $this->fail("invalid user",400); 
+            if (!$user) return $this->fail("invalid user", 400);
+        } else {
+            $data['ret_data'] = "Invalid user";
+            return $this->fail($data, 400);
         }
-        else{          
-            $data['ret_data']="Invalid user";
-            return $this->fail($data,400);
-        }
-        if($tokendata['aud']=='superadmin' || $tokendata['aud']=='user'){
-            $permittedIp=new PermittedIPModel();
-            $keydetails=$permittedIp->where("pip_delete_flag",0)->orderBy('pip_id','desc')->findAll();
-            $data['ret_data']="success";
-            $data['pips']=$keydetails;
-            return $this->respond($data,200);
+        if ($tokendata['aud'] == 'superadmin' || $tokendata['aud'] == 'user') {
+            $permittedIp = new PermittedIPModel();
+            $keydetails = $permittedIp->where("pip_delete_flag", 0)->orderBy('pip_id', 'desc')->findAll();
+            $data['ret_data'] = "success";
+            $data['pips'] = $keydetails;
+            return $this->respond($data, 200);
         }
     }
 
-    
-   public function insertUserLog($log,$id)
-   {
-       $logmodel = new UserActivityLog();
-       $ip=$this->request->getIPAddress();       
-       $indata=[
-           'log_user'    => $id,
-           'log_ip'   =>  $ip,
-           'log_activity' =>$log            
-       ];        
-       $results=$logmodel->insert($indata);
-   }
+    public function deleteIPAddress()
+    {
+        $model = new PermittedIPModel();
+        $common = new Common();
+        $valid = new Validation();
+
+        $heddata = $this->request->headers();
+        $tokendata = $common->decode_jwt_token($valid->getbearertoken($heddata['Authorization']));
+        if ($tokendata['aud'] == 'superadmin') {
+            $SuperModel = new SuperAdminModel();
+            $super = $SuperModel->where("s_adm_id", $this->db->escapeString($tokendata['uid']))->first();
+            if (!$super) return $this->fail("invalid user", 400);
+        } else if ($tokendata['aud'] == 'user') {
+            $usmodel = new UserModel();
+            $user = $usmodel->where("us_id", $this->db->escapeString($tokendata['uid']))->first();
+            if (!$user) return $this->fail("invalid user", 400);
+        } else {
+            $data['ret_data'] = "Invalid user";
+            return $this->fail($data, 400);
+        }
+        if ($tokendata['aud'] == 'superadmin' || $tokendata['aud'] == 'user') {
+            $id = $this->request->getVar('id');
+            $data = [
+                'pip_delete_flag' => 1,
+                'pip_updated_on' => date('Y-m-d H:i:s'),
+            ];
+            if ($model->where('pip_id',  $this->db->escapeString($id))->set($data)->update() === false) {
+                $response = [
+                    'errors' => $model->errors(),
+                    'ret_data' => 'fail'
+                ];
+
+                return $this->respond($response, 200);
+            } else {
+                $this->insertUserLog('IP Deleted ', $tokendata['uid']);
+                $response = [
+                    'ret_data' => 'success'
+                ];
+                return $this->respond($response, 200);
+            }
+        }
+    }
+
+    public function insertUserLog($log, $id)
+    {
+        $logmodel = new UserActivityLog();
+        $ip = $this->request->getIPAddress();
+        $indata = [
+            'log_user'    => $id,
+            'log_ip'   =>  $ip,
+            'log_activity' => $log
+        ];
+        $results = $logmodel->insert($indata);
+    }
 }

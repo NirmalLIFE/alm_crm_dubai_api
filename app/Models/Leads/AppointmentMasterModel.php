@@ -14,7 +14,7 @@ class AppointmentMasterModel extends Model
     protected $returnType       = 'array';
     protected $useSoftDeletes   = false;
     protected $protectFields    = true;
-    protected $allowedFields    = ['apptm_id', 'apptm_code', 'apptm_customer_code', 'apptm_diss_id', 'apptm_lead_id', 'apptm_status', 'apptm_transport_service', 'apptm_created_on', 'apptm_created_by', 'apptm_updated_on', 'apptm_updated_by', 'apptm_delete_flag', 'apptm_type', 'apptm_group', 'apptm_pickup_mode', 'apptm_alternate_no'];
+    protected $allowedFields    = ['apptm_id', 'apptm_code', 'apptm_customer_code', 'apptm_diss_id', 'apptm_lead_id', 'apptm_status', 'apptm_transport_service', 'apptm_pickup_mode', 'apptm_created_on', 'apptm_created_by', 'apptm_updated_on', 'apptm_updated_by', 'apptm_delete_flag', 'apptm_type', 'apptm_group', 'apptm_alternate_no'];
 
     // Dates
     protected $useTimestamps = false;

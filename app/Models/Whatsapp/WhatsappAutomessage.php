@@ -1,20 +1,20 @@
 <?php
 
-namespace App\Models\Customer;
+namespace App\Models\Whatsapp;
 
 use CodeIgniter\Model;
 
-class MaraghiJobcardModel extends Model
+class WhatsappAutomessage extends Model
 {
     protected $DBGroup          = 'default';
-    protected $table            = 'cust_job_data_laabs';
-    protected $primaryKey       = 'job_no';
+    protected $table            = 'whatsapp_automated_message_content';
+    protected $primaryKey       = 'wamc_id ';
     protected $useAutoIncrement = true;
     protected $insertID         = 0;
     protected $returnType       = 'array';
     protected $useSoftDeletes   = false;
     protected $protectFields    = true;
-    protected $allowedFields    = ['job_no', 'customer_no', 'vehicle_id', 'car_reg_no', 'job_open_date', 'job_close_date', 'received_date', 'promised_date', 'extended_promise_date', 'speedometer_reading', 'delivered_date', 'invoice_no', 'invoice_date', 'sa_emp_id', 'user_name', 'job_status', 'job_scn_id', 'created_on', 'updated_on', 'feedback_flag'];
+    protected $allowedFields    = ['wamc_id', 'wamc_message_id', 'wamc_message_content', 'wamc_created_at', 'wamc_updated_at', 'wamc_created_by', 'wamc_updated_by', 'wamc_delete_flag'];
 
     // Dates
     protected $useTimestamps = false;

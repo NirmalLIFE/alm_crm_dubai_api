@@ -96,6 +96,7 @@ class WhatsappCampaignMessageModel extends Model
         // Build the base SQL with subqueries
         $sql = "SELECT 
             cc.alm_wb_camp_msg_created_on,
+            cc.alm_wb_camp_msg_cus_reg_no,
             DATE_FORMAT(STR_TO_DATE(cc.alm_wb_camp_msg_created_on, '%Y-%m-%d'), '%d-%m-%Y') AS message_date,
             camp.alm_wb_camp_id,
             camp.alm_wb_camp_type,

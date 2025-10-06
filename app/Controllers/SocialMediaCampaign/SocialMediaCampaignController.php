@@ -350,26 +350,56 @@ class SocialMediaCampaignController extends ResourceController
             $dateFrom = $this->request->getVar('dateFrom');
             $dateTo = $this->request->getVar('dateTo');
 
-            $campaigns = $socialMediaCampaign->select('social_media_campaign.*,us_firstname,smcs_name,smcs_name')
+            // $campaigns = $socialMediaCampaign->select('social_media_campaign.*,us_firstname,smcs_name,smcs_name')
+            //     ->where('smc_delete_flag', 0)
+            //     ->join('users', 'users.us_id = smc_owner', 'left')
+            //     ->join('social_media_campaign_source', 'social_media_campaign_source.smcs_id =smc_source', 'left');
+
+            // // if (!empty($start_Date)) {
+            // //     $campaigns->where("DATE(smc_start_date) <=", $start_Date)
+            // //         ->where("DATE(smc_end_date) >=", $start_Date);
+            // // }
+            // // if (!empty($end_Date)) {
+            // //     $campaigns->where("DATE(smc_start_date) <=", $end_Date)
+            // //         ->where("DATE(smc_end_date) >=", $end_Date);
+            // // }
+            // if (!empty($dateFrom)) {
+            //     $campaigns->where('DATE(smc_start_date) >=', $dateFrom);
+            // }
+            // if (!empty($dateTo)) {
+            //     $campaigns->where('DATE(smc_end_date) <=', $dateTo);
+            // }
+            // $campaigns = $campaigns->findAll();
+
+            $campaigns = $socialMediaCampaign->select('social_media_campaign.*, us_firstname, smcs_name')
                 ->where('smc_delete_flag', 0)
                 ->join('users', 'users.us_id = smc_owner', 'left')
-                ->join('social_media_campaign_source', 'social_media_campaign_source.smcs_id =smc_source', 'left');
+                ->join('social_media_campaign_source', 'social_media_campaign_source.smcs_id = smc_source', 'left');
 
-            // if (!empty($start_Date)) {
-            //     $campaigns->where("DATE(smc_start_date) <=", $start_Date)
-            //         ->where("DATE(smc_end_date) >=", $start_Date);
-            // }
-            // if (!empty($end_Date)) {
-            //     $campaigns->where("DATE(smc_start_date) <=", $end_Date)
-            //         ->where("DATE(smc_end_date) >=", $end_Date);
-            // }
-            if (!empty($dateFrom)) {
+            if (!empty($dateFrom) && !empty($dateTo)) {
+                // Fetch campaigns where the date range overlaps
+                $campaigns->groupStart()
+                    ->where('DATE(smc_start_date) >=', $dateFrom)
+                    ->where('DATE(smc_start_date) <=', $dateTo)
+                    ->groupEnd()
+                    ->orGroupStart()
+                    ->where('DATE(smc_end_date) >=', $dateFrom)
+                    ->where('DATE(smc_end_date) <=', $dateTo)
+                    ->groupEnd()
+                    ->orGroupStart()
+                    ->where('DATE(smc_start_date) <=', $dateFrom)
+                    ->where('DATE(smc_end_date) >=', $dateTo)
+                    ->groupEnd();
+            } elseif (!empty($dateFrom)) {
+                // Fetch campaigns starting on or after $dateFrom
                 $campaigns->where('DATE(smc_start_date) >=', $dateFrom);
-            }
-            if (!empty($dateTo)) {
+            } elseif (!empty($dateTo)) {
+                // Fetch campaigns ending on or before $dateTo
                 $campaigns->where('DATE(smc_end_date) <=', $dateTo);
             }
+
             $campaigns = $campaigns->findAll();
+
 
 
             if (sizeof($campaigns) > 0) {
@@ -523,7 +553,7 @@ class SocialMediaCampaignController extends ResourceController
                 //->where('smc_status', 0)
                 ->where('smc_delete_flag', 0)
                 ->where('smc_message', $message)
-                ->where('smc_ad_id',$this->request->getVar('id'));
+                ->where('smc_ad_id', $this->request->getVar('id'));
             if (is_array($source)) {
                 $campaigns->whereIn('smc_source', $source);
             } else {
@@ -710,20 +740,95 @@ class SocialMediaCampaignController extends ResourceController
             $startdate = $this->request->getVar('dateFrom');
             $enddate = $this->request->getVar('dateTo');
             $campId = $this->request->getVar('campaign');
+            $customerType = $this->request->getVar('customerType');
             $leadmodel = new LeadModel();
 
 
-            $customerDetails = $leadmodel->where('source_id', 2)
-                ->where('lead_createdon >=', $startdate)
-                ->where('lead_createdon <=', $enddate)
-                ->join('appointment_master', 'lead_id = appointment_master.apptm_lead_id', 'left')
-                ->join('social_media_campaign', 'social_media_campaign.smc_id = lead_social_media_mapping', 'left')
-                ->join('social_media_campaign_source', 'social_media_campaign_source.smcs_id = lead_social_media_source', 'left')
-                ->where('smc_delete_flag', 0);
-            if (!empty($campId)) {
-                $customerDetails->where('smc_id', $campId);
+            if ($customerType == 1) {
+
+                $customerDetails = $leadmodel
+                    ->select('leads.*, appointment_master.* ,appointment_master.*, social_media_campaign_source.*, social_media_campaign.*, COUNT(cust_job_data_laabs.job_no) AS total_job_count')
+                    ->select('SUM(IF(STR_TO_DATE(cust_job_data_laabs.job_open_date, "%d-%b-%y") > leads.lead_createdon, 1, 0)) AS job_count_after_lead')
+                    ->select('SUM(IF(STR_TO_DATE(cust_job_data_laabs.job_open_date, "%d-%b-%y") < leads.lead_createdon, 1, 0)) AS job_count_before_lead')
+                    ->join('appointment_master', 'lead_id = appointment_master.apptm_lead_id', 'left')
+                    ->join('social_media_campaign', 'social_media_campaign.smc_id = lead_social_media_mapping', 'left')
+                    ->join('social_media_campaign_source', 'social_media_campaign_source.smcs_id = lead_social_media_source', 'left')
+                    ->join(
+                        'cust_data_laabs',
+                        'SUBSTRING(cust_data_laabs.phone, -9) = SUBSTRING(leads.phone, -9)',
+                        'left'
+                    )
+                    ->join(
+                        'cust_job_data_laabs',
+                        'cust_job_data_laabs.customer_no = cust_data_laabs.customer_code',
+                        'left'
+                    )
+                    ->where('social_media_campaign.smc_delete_flag', 0)
+                    ->groupBy('leads.lead_id');
+
+                if (!empty($startdate)) {
+                    $customerDetails->where('DATE(leads.lead_createdon) >=', $startdate);
+                }
+                if (!empty($enddate)) {
+                    $customerDetails->where('DATE(leads.lead_createdon) <=', $enddate);
+                }
+                if (!empty($campId) && $campId != 0) {
+                    $customerDetails->where('social_media_campaign.smc_id', $campId);
+                }
+
+                $customerDetails = $customerDetails->findAll();
+            } else {
+                $builder = $this->db->table('leads');
+                $builder->join('appointment_master', 'leads.lead_id = appointment_master.apptm_lead_id', 'left');
+                $builder->join('social_media_campaign', 'social_media_campaign.smc_id = leads.lead_social_media_mapping', 'left');
+                $builder->join('social_media_campaign_source', 'social_media_campaign_source.smcs_id = leads.lead_social_media_source', 'left');
+                $builder->whereIn('leads.status_id', [8, 1, 6, 5]);
+                $builder->whereIn('source_id', [8]);
+                // $builder->where('lead_social_media_source !=', 0);
+                // $builder->where('lead_social_media_mapping !=', 0);
+                $builder->where('leads.lead_delete_flag', 0);
+                $builder->groupBy('leads.lead_id');
+                if (!empty($startdate)) {
+                    $builder->where('DATE(leads.lead_createdon) >=', $startdate);
+                }
+                if (!empty($enddate)) {
+                    $builder->where('DATE(leads.lead_createdon) <=', $enddate);
+                }
+                if (!empty($campId) && $campId != 0) {
+                    $builder->where('social_media_campaign.smc_id', $campId);
+                }
+                $builder->orderBy('leads.lead_id', 'desc');
+                $customerDetails = $builder->get()->getResultArray();
+
+                // $customerDetails = $leadmodel
+                //     // ->where('source_id', 2)
+                //     // ->where('DATE(lead_createdon) >=', $startdate)
+                //     // ->where('DATE(lead_createdon) <=', $enddate)
+                //     ->join('appointment_master', 'lead_id = appointment_master.apptm_lead_id', 'left')
+                //     ->join('social_media_campaign', 'social_media_campaign.smc_id = lead_social_media_mapping', 'left')
+                //     ->join('social_media_campaign_source', 'social_media_campaign_source.smcs_id = lead_social_media_source', 'left')
+                //     ->whereIn('status_id',  [8, 1 , 6, 5])
+                //     ->where('lead_delete_flag', 0)
+                //     ->orderby('lead_id', 'desc')
+                //     ->where('social_media_campaign.smc_delete_flag', 0);
+                // if (!empty($startdate)) {
+                //     $customerDetails->where('DATE(lead_createdon) >=', $startdate);
+                // }
+                // if (!empty($enddate)) {
+                //     $customerDetails->where('DATE(lead_createdon) <=', $enddate);
+                // }
+                // if (!empty($campId) && $campId != 0) {
+                //     $customerDetails->where('social_media_campaign.smc_id', $campId);
+                // }
+                // $customerDetails = $customerDetails->findAll();
             }
-            $customerDetails = $customerDetails->findAll();
+
+
+
+
+
+
+
 
 
             $data['ret_data'] = "succes";
@@ -780,6 +885,56 @@ class SocialMediaCampaignController extends ResourceController
                 $data = [
                     'ret_data' => 'success',
                     'SocialMediaCampaign' => $campaigns,
+                ];
+                return $this->respond($data, 200);
+            }
+        }
+    }
+
+    public function updateSocialMediaCampaignBudget()
+    {
+
+        $common = new Common();
+        $valid = new Validation();
+        $heddata = $this->request->headers();
+        $tokendata = $common->decode_jwt_token($valid->getbearertoken($heddata['Authorization']));
+        if ($tokendata['aud'] == 'superadmin') {
+            $SuperModel = new SuperAdminModel();
+            $super = $SuperModel->where("s_adm_id", $tokendata['uid'])->first();
+            if (!$super) return $this->fail("invalid user", 400);
+        } else if ($tokendata['aud'] == 'user') {
+            $usmodel = new UserModel();
+            $user = $usmodel->where("us_id", $tokendata['uid'])->first();
+            if (!$user) return $this->fail("invalid user", 400);
+        } else {
+            $data['ret_data'] = "Invalid user";
+            return $this->fail($data, 400);
+        }
+        if ($tokendata) {
+
+            $socialMediaCampaign = new SocialMediaCampaignModel();
+            $smc_budget = $this->request->getVar('smc_budget');
+            $smc_id = $this->request->getVar('smc_id');
+
+
+            $this->db->transStart();
+            $data = [
+                'smc_budget' =>  $smc_budget,
+                'smc_updated_by' => $tokendata['uid'],
+                'smc_updated_on' => date("Y-m-d H:i:s"),
+            ];
+
+            $ret = $socialMediaCampaign->where('smc_id', $smc_id)->set($data)->update();
+
+            if ($this->db->transStatus() === false) {
+                $this->db->transRollback();
+                $data['ret_data'] = "fail";
+                return $this->respond($data, 200);
+            } else {
+                $this->db->transCommit();
+                $data = [
+                    'ret_data' => 'success',
+                    'SocialMediaCampaign' => $ret,
                 ];
                 return $this->respond($data, 200);
             }

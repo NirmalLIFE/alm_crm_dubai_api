@@ -231,9 +231,18 @@
             $adjustedDisplayPrice = ($display_price ?? 0) - $unselectedTotal;
             $finalPrice = max($grandCost, $adjustedDisplayPrice);
             ?>
-            <div class="service-price">
-                Service Price : AED <?= number_format($finalPrice, 2) ?>
-            </div>
+            <?php if ($type != 0): ?>
+                <div class="service-price" style="display: flex; align-items: center; font-size: 16px; font-weight: bold; color: #2563eb;">
+                    <span>Service Price : AED <?= number_format($finalPrice, 2) ?></span>
+                    <span style="border-left: 1px solid #ccc; margin-left: 8px; padding-left: 3px; font-size: 14px; font-weight: normal; color: #6b7280;">
+                        Excluding VAT
+                    </span>
+                </div>
+            <?php endif; ?>
+
+
+
+
 
         <?php else: ?>
             <p>No items available.</p>
@@ -241,7 +250,7 @@
 
 
     </div>
-    <div class="printed-on" >
+    <div class="printed-on">
         <hr style="margin-top: 10px; border: 0; border-top: 1px solid #999;" />
         Print by: <?php echo $print_by; ?> &nbsp;|&nbsp;
         Printed on: <?= date('d-m-Y h:i A') ?>

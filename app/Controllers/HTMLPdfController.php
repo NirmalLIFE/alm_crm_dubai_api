@@ -494,7 +494,6 @@ class HTMLPdfController extends BaseController
     }
   }
 
-
   function printServicePackagePDF()
   {
     $mpdf = new \Mpdf\Mpdf();

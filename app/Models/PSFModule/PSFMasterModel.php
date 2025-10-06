@@ -43,7 +43,8 @@ class PSFMasterModel extends Model
         'psfm_followup_whatsapp_id',
         'psfm_primary_response_type',
         'psfm_folloup_response_type',
-        'psfm_delete_flag'
+        'psfm_delete_flag',
+        'psfm_assign_flag'
 
     ];
 }

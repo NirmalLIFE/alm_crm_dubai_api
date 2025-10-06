@@ -343,8 +343,7 @@ class CommonSettings extends ResourceController
                         'password' => base64_decode(base64_decode(base64_decode($keydetails['yeastar_pass'])))
                     ];
 
-                    // $url = 'https://almaragy.ras.yeastar.com/openapi/v1.0/get_token';
-                    $url = 'https://almaraghidxb.ras.yeastar.com/openapi/v1.0/get_token';
+                    $url = 'https://almaragy.ras.yeastar.com/openapi/v1.0/get_token';
                     $ch = curl_init($url);
                     $headers = [
                         'Content-Type: text/plain',
@@ -372,8 +371,7 @@ class CommonSettings extends ResourceController
                     $postData = [
                         'refresh_token' => base64_decode(base64_decode(base64_decode($keydetails['yeastar_refresh_token']))),
                     ];
-                    // $url = 'https://almaragy.ras.yeastar.com/openapi/v1.0/refresh_token';
-                    $url = 'https://almaraghidxb.ras.yeastar.com/openapi/v1.0/refresh_token';
+                    $url = 'https://almaragy.ras.yeastar.com/openapi/v1.0/refresh_token';
                     $ch = curl_init($url);
                     $headers = [
                         'Content-Type: text/plain',
@@ -1227,7 +1225,7 @@ class CommonSettings extends ResourceController
             if ($checkStatus == true) {
                 $builder = $this->db->table('alm_spare_invoice_master');
                 $builder->select('inv_id, inv_nm_id, inv_nm_supplier_id, inv_nm_description, inv_customer_id, inv_vehicle_id, inv_jobcard_no,
-                inv_nm_status, inv_nm_type, inv_nm_purchase_type, inv_nm_branch, inv_nm_sub_total, inv_nm_vat_total,
+                inv_nm_status, inv_nm_type, inv_nm_purchase_type, inv_nm_branch, inv_nm_sub_total, inv_nm_vat_total,inv_nm_return_total,
                 inv_nm_discount, inv_nm_inv_date, inv_alm_margin_total, inv_alm_discount, inv_created_by, inv_created_on,
                 inv_updated_by, inv_updated_on, cvl.vehicle_id as veh_data_vehicle_id, model_name, reg_no, chassis_no,
                 job_no, car_reg_no, cjl.vehicle_id as job_vehicle_id, cjl.user_name as job_user_name, job_open_date,
@@ -1263,7 +1261,7 @@ class CommonSettings extends ResourceController
             } else {
                 $builder = $this->db->table('alm_spare_invoice_master');
                 $builder->select('inv_id, inv_nm_id, inv_nm_supplier_id, inv_nm_description, inv_customer_id, inv_vehicle_id, inv_jobcard_no,
-                inv_nm_status, inv_nm_type, inv_nm_purchase_type, inv_nm_branch, inv_nm_sub_total, inv_nm_vat_total,
+                inv_nm_status, inv_nm_type, inv_nm_purchase_type, inv_nm_branch, inv_nm_sub_total, inv_nm_vat_total,inv_nm_return_total,
                 inv_nm_discount, inv_nm_inv_date, inv_alm_margin_total, inv_alm_discount, inv_created_by, inv_created_on,
                 inv_updated_by, inv_updated_on, cvl.vehicle_id as veh_data_vehicle_id, model_name, reg_no, chassis_no,
                 job_no, car_reg_no, cjl.vehicle_id as job_vehicle_id, cjl.user_name as job_user_name, job_open_date,
@@ -2628,8 +2626,12 @@ class CommonSettings extends ResourceController
             $invItems = new PartsInvoiceItems();
             $invLog = new PartsInvoiceLog();
 
+            $inv_id = $this->request->getVar('inv_id');
+
             $masterdata = [
                 'inv_alm_margin_total' => $this->request->getVar('inv_alm_margin_total'),
+                'inv_nm_sub_total' => $this->request->getVar('inv_nm_sub_total'),
+                'inv_nm_vat_total' => $this->request->getVar('inv_nm_vat_total'),
                 'inv_alm_discount' => $this->request->getVar('inv_alm_discount'),
                 'inv_updated_by' => $tokendata['uid'],
                 'inv_updated_on' => date("Y-m-d H:i:s"),
@@ -2641,16 +2643,35 @@ class CommonSettings extends ResourceController
                 $updatedata = $this->request->getVar('invoice_items');
                 if (sizeof($updatedata) > 0) {
                     $updatearray_data = array();
+                    $insdata = array();
                     foreach ($updatedata as $eachdata) {
-                        $update_data = [
-                            'inv_item_id' => $eachdata->inv_item_id,
-                            'inv_item_return_qty' => $eachdata->ITEM_QTY_RETURN,
-                            'inv_item_margin' => $eachdata->inv_item_margin,
-                            'inv_item_margin_amount' => $eachdata->inv_item_margin_amount,
-                        ];
-                        array_push($updatearray_data, $update_data);
+                        if ($eachdata->inv_item_id != '0') {
+                            $update_data = [
+                                'inv_item_id' => $eachdata->inv_item_id,
+                                'inv_item_return_qty' => $eachdata->inv_item_return_qty,
+                                'inv_item_margin' => $eachdata->inv_item_margin,
+                                'inv_item_margin_amount' => $eachdata->inv_item_margin_amount,
+                                'inv_item_delete_flag' => $eachdata->inv_item_delete_flag,
+                            ];
+                            array_push($updatearray_data, $update_data);
+                        } else {
+                            $insdata[] = array(
+                                'inv_item_part_number' => $eachdata->inv_item_part_number,
+                                'inv_item_master' => $inv_id,
+                                'inv_item_qty' => $eachdata->inv_item_qty,
+                                'inv_item_nm_unit_price' => $eachdata->inv_item_nm_unit_price,
+                                'inv_item_nm_vat' => $eachdata->inv_item_nm_vat,
+                                'inv_item_description' => $eachdata->inv_item_description,
+                                'inv_item_nm_discount' => $eachdata->inv_item_nm_discount,
+                                'inv_item_margin' => $eachdata->inv_item_margin,
+                                'inv_item_margin_amount' => $eachdata->inv_item_margin_amount,
+                                'inv_old_item_margin' => $eachdata->inv_item_margin,
+                                'inv_old_item_margin_amount' => $eachdata->inv_item_margin_amount,
+                            );
+                        }
                     }
                     sizeof($updatearray_data) > 0 ? $invItems->updateBatch($updatearray_data, 'inv_item_id') : "";
+                    sizeof($insdata) > 0 ? $invItems->insertBatch($insdata) : "";
                 }
                 $invlogdata = [
                     'inv_log_master_id' =>  $master,
@@ -2951,17 +2972,57 @@ class CommonSettings extends ResourceController
                 ->where("str_to_date(job_open_date, '%d-%M-%y')  <=", $this->request->getVar('end_date'))
                 ->join('cust_data_laabs', 'cust_data_laabs.customer_code=cust_job_data_laabs.customer_no', 'left')
                 ->orderby('job_no', "desc")->findAll();
-            $uniqueArray = $this->removeDuplicates($jobs_list, 'vehicle_id');
+            $uniqueArray = $jobs_list;
             $job_cards = [];
-            foreach ($uniqueArray as $temp) {
-                $temp['old_jobcard'] = $laabsJob->where("str_to_date(job_open_date, '%d-%M-%y')  <", $this->request->getVar('start_date'))
-                    ->where('vehicle_id', $temp['vehicle_id'])->where('job_status', 'INV')->orderby('job_no', "desc")->first();
+            $job_cards1 = [];
+            // foreach ($uniqueArray as $temp) {
+            //     $temp['old_jobcard'] = $laabsJob->where("str_to_date(job_open_date, '%d-%M-%y')  <", $this->request->getVar('start_date'))
+            //         ->where('vehicle_id', $temp['vehicle_id'])->where('job_status', 'INV')->orderby('job_no', "desc")->first();
+
+
+            //         array_push($job_cards, $temp);
+            // }
+
+
+            $startDate = $this->request->getVar('start_date');
+            $laabsJobs = $laabsJob->select('*')
+                ->where("str_to_date(job_open_date, '%d-%M-%y') <", $startDate)
+                ->where('job_status', 'INV')
+                ->orderby('job_no', "desc")
+                ->findAll();
+
+
+            $laabsJobsByVehicleId = [];
+            foreach ($laabsJobs as $job) {
+                $vehicleId = $job['vehicle_id'];
+                if (!isset($laabsJobsByVehicleId[$vehicleId])) {
+                    $laabsJobsByVehicleId[$vehicleId] = [];
+                }
+                $laabsJobsByVehicleId[$vehicleId][] = $job;
+            }
+
+
+            foreach ($uniqueArray as &$temp) {
+                $vehicleId = $temp['vehicle_id'];
+                $temp['old_jobcard'] = null;
+
+                if (isset($laabsJobsByVehicleId[$vehicleId])) {
+
+                    $temp['old_jobcard'] = reset($laabsJobsByVehicleId[$vehicleId]);
+                }
+
+
                 array_push($job_cards, $temp);
             }
+
+            $uniqueArray1 = $this->removeDuplicates($job_cards, 'vehicle_id');
             if (sizeof($jobs_list)) {
                 $response = [
                     'ret_data' => 'success',
-                    'customers' => $job_cards
+                    'customers' => $uniqueArray1,
+                    'job_cards' => $job_cards,
+
+
                 ];
             } else {
                 $response = [
@@ -3422,7 +3483,6 @@ class CommonSettings extends ResourceController
         return $this->respond($response, 200);
     }
 
-
     public function getServiceRemainderDays()
     {
         $common = new Common();
@@ -3539,6 +3599,319 @@ class CommonSettings extends ResourceController
                 'ret_data' => 'fail',
             ];
             return $this->respond($response, 200);
+        }
+    }
+
+    public function updateWorkshopTiming()
+    {
+        $model = new CommonSettingsModel();
+        $common = new Common();
+        $valid = new Validation();
+
+        $heddata = $this->request->headers();
+        $tokendata = $common->decode_jwt_token($valid->getbearertoken($heddata['Authorization']));
+
+        // Validate user
+        if ($tokendata['aud'] == 'superadmin') {
+            $SuperModel = new SuperAdminModel();
+            $super = $SuperModel->where("s_adm_id", $this->db->escapeString($tokendata['uid']))->first();
+            if (!$super) return $this->fail("invalid user", 400);
+        } elseif ($tokendata['aud'] == 'user') {
+            $usmodel = new UserModel();
+            $user = $usmodel->where("us_id", $this->db->escapeString($tokendata['uid']))->first();
+            if (!$user) return $this->fail("invalid user", 400);
+        } else {
+            return $this->fail("Invalid user", 400);
+        }
+
+        // Only superadmin/user can proceed
+        $days = $this->request->getJSON(true); // Angular sends plain array []
+
+        $builder = $this->db->table('common_settings');
+        $update = $builder->where('cst_id', 1)
+            ->update(['working_time_json' => json_encode($days)]);
+
+        if ($update === false) {
+            // Query error
+            return $this->respond([
+                'ret_data' => 'fail',
+                'message'  => 'Database update failed'
+            ], 200);
+        }
+
+        if ($this->db->affectedRows() === 0) {
+            // Nothing updated (maybe record not found or same data sent)
+            return $this->respond([
+                'ret_data' => 'success',
+                'message'  => 'No rows updated (invalid ID or no changes)'
+            ], 400);
+        }
+
+        return $this->respond([
+            'ret_data' => 'success',
+            'message'  => 'Workshop timings updated successfully'
+        ], 200);
+    }
+
+    public function getWorksdaysTiming()
+    {
+        $model = new CommonSettingsModel();
+        $common = new Common();
+        $valid = new Validation();
+
+        $heddata = $this->request->headers();
+        $tokendata = $common->decode_jwt_token($valid->getbearertoken($heddata['Authorization']));
+
+        // Validate user
+        if ($tokendata['aud'] == 'superadmin') {
+            $SuperModel = new SuperAdminModel();
+            $super = $SuperModel->where("s_adm_id", $this->db->escapeString($tokendata['uid']))->first();
+            if (!$super) return $this->fail("invalid user", 400);
+        } elseif ($tokendata['aud'] == 'user') {
+            $usmodel = new UserModel();
+            $user = $usmodel->where("us_id", $this->db->escapeString($tokendata['uid']))->first();
+            if (!$user) return $this->fail("invalid user", 400);
+        } else {
+            return $this->fail("Invalid user", 400);
+        }
+
+        $builder = $this->db->table('common_settings');
+
+        // Fetch JSON from DB (assume cst_id = 1)
+        $row = $builder->where('cst_id', 1)->get()->getRow();
+
+        if (!$row || empty($row->working_time_json)) {
+            return $this->respond([
+                'ret_data' => 'error',
+                'message'  => 'No workshop timing found'
+            ]);
+        }
+
+        $decoded = json_decode($row->working_time_json, true);
+        $workshopDays = [];
+
+        if (isset($decoded['workshopDays'])) {
+            foreach ($decoded['workshopDays'] as $day) {
+                $workshopDays[] = [
+                    'name'      => $day['name'],
+                    'start'     => $day['start'] ?? '',
+                    'noonStart' => $day['noonStart'] ?? '', // optional
+                    'noonEnd'   => $day['noonEnd'] ?? '',   // optional
+                    'end'       => $day['end'] ?? '',
+                    'open'      => $day['open'] ?? false,
+                ];
+            }
+        }
+
+        return $this->respond([
+            'ret_data'  => 'success',
+            'workdays'  => $workshopDays
+        ]);
+    }
+
+    public function saveOffDays()
+    {
+        $model = new CommonSettingsModel();
+        $common = new Common();
+        $valid = new Validation();
+
+        $heddata = $this->request->headers();
+        $tokendata = $common->decode_jwt_token($valid->getbearertoken($heddata['Authorization']));
+
+        // Validate user
+        if ($tokendata['aud'] == 'superadmin') {
+            $SuperModel = new SuperAdminModel();
+            $super = $SuperModel->where("s_adm_id", $this->db->escapeString($tokendata['uid']))->first();
+            if (!$super) return $this->fail("invalid user", 400);
+        } elseif ($tokendata['aud'] == 'user') {
+            $usmodel = new UserModel();
+            $user = $usmodel->where("us_id", $this->db->escapeString($tokendata['uid']))->first();
+            if (!$user) return $this->fail("invalid user", 400);
+        } else {
+            return $this->fail("Invalid user", 400);
+        }
+
+        $builder = $this->db->table('common_settings');
+
+        try {
+            // Get JSON body sent by Angular
+            $input = $this->request->getJSON(true);
+            $dates = $input['dates'] ?? [];
+
+            // Convert array to JSON for storage
+            $jsonDates = json_encode($dates);
+
+            // Perform the update and check the result
+            $builder->where('cst_id', 1);
+            $updated = $builder->update(['off_days' => $jsonDates]);
+
+            if ($updated === false) {
+                // Query builder failed (validation or SQL error)
+                return $this->fail([
+                    'ret_data' => 'failed',
+                    'message'  => 'Database update failed'
+                ], 500);
+            }
+
+            return $this->respond([
+                'ret_data' => 'success',
+                'message'  => 'Dates saved successfully'
+            ]);
+        } catch (\Throwable $e) {
+            // Catch exceptions (connection errors, JSON issues, etc.)
+            // log_message('error', 'saveOffDays failed: ' . $e->getMessage());
+            return $this->fail([
+                'ret_data' => 'failed',
+                'message'  => 'Exception: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    public function getOffDays()
+    {
+
+        $common = new Common();
+        $valid = new Validation();
+
+        $heddata = $this->request->headers();
+        $tokendata = $common->decode_jwt_token($valid->getbearertoken($heddata['Authorization']));
+
+        // Validate user
+        if ($tokendata['aud'] == 'superadmin') {
+            $SuperModel = new SuperAdminModel();
+            $super = $SuperModel->where("s_adm_id", $this->db->escapeString($tokendata['uid']))->first();
+            if (!$super) return $this->fail("invalid user", 400);
+        } elseif ($tokendata['aud'] == 'user') {
+            $usmodel = new UserModel();
+            $user = $usmodel->where("us_id", $this->db->escapeString($tokendata['uid']))->first();
+            if (!$user) return $this->fail("invalid user", 400);
+        } else {
+            return $this->fail("Invalid user", 400);
+        }
+
+        $db      = \Config\Database::connect();
+        $builder = $db->table('common_settings');
+
+        $row  = $builder->where('cst_id', 1)->get()->getRow();
+        $dates = [];
+        if ($row && $row->off_days) {
+            $decoded = json_decode($row->off_days, true);
+            $dates   = is_array($decoded) ? $decoded : [];
+        }
+
+        return $this->respond(['ret_data' => 'success', 'dates' => $dates]);
+    }
+
+
+
+
+    public function saveAwayMessage()
+    {
+        $common = new Common();
+        $valid = new Validation();
+
+        $heddata = $this->request->headers();
+        $tokendata = $common->decode_jwt_token($valid->getbearertoken($heddata['Authorization']));
+
+        // Validate user
+        if ($tokendata['aud'] == 'superadmin') {
+            $SuperModel = new SuperAdminModel();
+            $super = $SuperModel->where("s_adm_id", $this->db->escapeString($tokendata['uid']))->first();
+            if (!$super) return $this->fail("invalid user", 400);
+        } elseif ($tokendata['aud'] == 'user') {
+            $usmodel = new UserModel();
+            $user = $usmodel->where("us_id", $this->db->escapeString($tokendata['uid']))->first();
+            if (!$user) return $this->fail("invalid user", 400);
+        } else {
+            return $this->fail("Invalid user", 400);
+        }
+
+        try {
+            $data = $this->request->getJSON(true);
+
+            $messageId = $data['messageId'];
+            $messageText = $data['messageText'];
+            $userId = $data['userId'];
+
+            $builder = $this->db->table('whatsapp_automated_message_content');
+
+            if (empty($messageText)) {
+                return $this->response->setJSON(['ret_data' => 'fail', 'message' => 'Message cannot be empty']);
+            }
+
+            $updateData = [
+                'wamc_message_content' => $messageText,
+                'wamc_updated_at' => date('Y-m-d H:i:s'),
+                'wamc_updated_by' => $userId,
+            ];
+
+            $updated = $builder->where('wamc_id', $messageId)->update($updateData);
+
+            if ($updated) {
+                return $this->response->setJSON([
+                    'ret_data' => 'success',
+                    'updated' => $updated
+                ]);
+            } else {
+                return $this->response->setJSON([
+                    'ret_data' => 'fail',
+                    'message' => 'Failed to update away message.'
+                ]);
+            }
+        } catch (\Exception $e) {
+            return $this->response->setJSON([
+                'ret_data' => 'fail',
+                'message' => $e->getMessage()
+            ]);
+        }
+    }
+
+    public function getAwayMessage()
+    {
+        $common = new Common();
+        $valid = new Validation();
+
+        $heddata = $this->request->headers();
+        $tokendata = $common->decode_jwt_token($valid->getbearertoken($heddata['Authorization']));
+
+        // Validate user
+        if ($tokendata['aud'] == 'superadmin') {
+            $SuperModel = new SuperAdminModel();
+            $super = $SuperModel->where("s_adm_id", $this->db->escapeString($tokendata['uid']))->first();
+            if (!$super) return $this->fail("invalid user", 400);
+        } elseif ($tokendata['aud'] == 'user') {
+            $usmodel = new UserModel();
+            $user = $usmodel->where("us_id", $this->db->escapeString($tokendata['uid']))->first();
+            if (!$user) return $this->fail("invalid user", 400);
+        } else {
+            return $this->fail("Invalid user", 400);
+        }
+
+        try {
+            $builder = $this->db->table('whatsapp_automated_message_content');
+
+            $row = $builder
+                ->select('wamc_id, wamc_message_id, wamc_message_content')
+                ->where('wamc_delete_flag', 0)
+                ->get()
+                ->getResult();
+
+            if ($row) {
+                return $this->response->setJSON([
+                    'ret_data' => 'success',
+                    'data' => $row
+                ]);
+            } else {
+                return $this->response->setJSON([
+                    'ret_data' => 'fail',
+                    'message'  => 'No record found.'
+                ]);
+            }
+        } catch (\Exception $e) {
+            return $this->response->setJSON([
+                'ret_data' => 'fail',
+                'message' => $e->getMessage()
+            ]);
         }
     }
 }

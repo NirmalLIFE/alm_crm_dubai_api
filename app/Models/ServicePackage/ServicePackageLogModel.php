@@ -1,20 +1,20 @@
 <?php
 
-namespace App\Models\Customer;
+namespace App\Models\ServicePackage;
 
 use CodeIgniter\Model;
 
-class MaraghiJobcardModel extends Model
+class ServicePackageLogModel extends Model
 {
     protected $DBGroup          = 'default';
-    protected $table            = 'cust_job_data_laabs';
-    protected $primaryKey       = 'job_no';
+    protected $table            = 'sp_log_table';
+    protected $primaryKey       = 'sp_log_id';
     protected $useAutoIncrement = true;
     protected $insertID         = 0;
     protected $returnType       = 'array';
     protected $useSoftDeletes   = false;
     protected $protectFields    = true;
-    protected $allowedFields    = ['job_no', 'customer_no', 'vehicle_id', 'car_reg_no', 'job_open_date', 'job_close_date', 'received_date', 'promised_date', 'extended_promise_date', 'speedometer_reading', 'delivered_date', 'invoice_no', 'invoice_date', 'sa_emp_id', 'user_name', 'job_status', 'job_scn_id', 'created_on', 'updated_on', 'feedback_flag'];
+    protected $allowedFields    = ['sp_log_id', 'sp_log_spmc_id', 'sp_log_notes', 'sp_log_created_by', 'sp_log_created_on', 'sp_log_delete_flag'];
 
     // Dates
     protected $useTimestamps = false;
