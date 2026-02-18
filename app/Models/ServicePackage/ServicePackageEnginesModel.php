@@ -6,7 +6,7 @@ use CodeIgniter\Model;
 
 class ServicePackageEnginesModel extends Model
 {
-    protected $DBGroup          = 'default';
+    protected $DBGroup          = 'commonDB';
     protected $table            = 'sp_engines';
     protected $primaryKey       = 'speng_id';
     protected $useAutoIncrement = true;

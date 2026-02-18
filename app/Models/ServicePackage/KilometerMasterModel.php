@@ -6,7 +6,7 @@ use CodeIgniter\Model;
 
 class KilometerMasterModel extends Model
 {
-    protected $DBGroup          = 'default';
+    protected $DBGroup          = 'commonDB';
     protected $table            = 'kilometer_master';
     protected $primaryKey       = 'km_id';
     protected $useAutoIncrement = true;

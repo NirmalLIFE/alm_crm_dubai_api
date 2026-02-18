@@ -13,11 +13,23 @@ use App\Models\ServicePackage\ServicePackageModelCodeModel;
 use App\Models\ServicePackage\ServicePackageSpareModel;
 use App\Models\ServicePackage\ServicePackageKMItemMap;
 use App\Models\ServicePackage\ServicePackageKmPriceModel;
-
+use App\Models\ServicePackage\PartsMasterLogModel;
 
 
 class SparePartsController extends ResourceController
 {
+
+    protected $db;         // default DB
+    protected $dbCommon;   // common DB
+
+    public function __construct()
+    {
+        // Default DB (Abu Dhabi / Dubai)
+        $this->db = \Config\Database::connect('default');
+
+        // Common DB (shared database)
+        $this->dbCommon = \Config\Database::connect('commonDB');
+    }
     /**
      * Return an array of resource objects, themselves in array format
      * Get Method Without Data
@@ -34,11 +46,13 @@ class SparePartsController extends ResourceController
         if ($tokendata['aud'] == 'superadmin') {
             $SuperModel = new SuperAdminModel();
             $super = $SuperModel->where("s_adm_id", $tokendata['uid'])->first();
-            if (!$super) return $this->fail("invalid user", 400);
+            if (!$super)
+                return $this->fail("invalid user", 400);
         } else if ($tokendata['aud'] == 'user') {
             $usmodel = new UserModel();
             $user = $usmodel->where("us_id", $tokendata['uid'])->first();
-            if (!$user) return $this->fail("invalid user", 400);
+            if (!$user)
+                return $this->fail("invalid user", 400);
         } else {
             $data['ret_data'] = "Invalid user";
             return $this->fail($data, 400);
@@ -48,7 +62,7 @@ class SparePartsController extends ResourceController
             $parts = $SparePartsMaster->where("pm_delete_flag !=", 1)
                 ->join('brand_list', 'brand_list.brand_id=pm_brand', 'left')
                 ->join('spare_category', 'spare_category.spc_id=pm_category', 'left')
-                ->select('parts_master.*, brand_list.brand_name,brand_list.brand_code,spare_category.spc_name',)
+                ->select('parts_master.*, brand_list.brand_name,brand_list.brand_code,spare_category.spc_name')
                 ->findAll();
 
             if (sizeof($parts) > 0) {
@@ -102,11 +116,13 @@ class SparePartsController extends ResourceController
         if ($tokendata['aud'] == 'superadmin') {
             $SuperModel = new SuperAdminModel();
             $super = $SuperModel->where("s_adm_id", $tokendata['uid'])->first();
-            if (!$super) return $this->fail("invalid user", 400);
+            if (!$super)
+                return $this->fail("invalid user", 400);
         } else if ($tokendata['aud'] == 'user') {
             $usmodel = new UserModel();
             $user = $usmodel->where("us_id", $tokendata['uid'])->first();
-            if (!$user) return $this->fail("invalid user", 400);
+            if (!$user)
+                return $this->fail("invalid user", 400);
         } else {
             $data['ret_data'] = "Invalid user";
             return $this->fail($data, 400);
@@ -115,7 +131,7 @@ class SparePartsController extends ResourceController
 
             $Sparedata = [
                 'pm_code' => $this->request->getVar('part_code'),
-                'pm_name' =>  $this->request->getVar('part_name'),
+                'pm_name' => $this->request->getVar('part_name'),
                 'pm_category' => $this->request->getVar('part_category'),
                 'pm_brand' => $this->request->getVar('part_brand'),
                 'pm_unit_type' => $this->request->getVar('pm_unit_type'),
@@ -163,6 +179,7 @@ class SparePartsController extends ResourceController
     public function update($id = null)
     {
         $SparePartsMaster = new SparePartsMaster();
+        $spareModel = new ServicePackageSpareModel();
         $common = new Common();
         $valid = new Validation();
         $heddata = $this->request->headers();
@@ -183,13 +200,40 @@ class SparePartsController extends ResourceController
             return $this->fail($data, 400);
         }
         if ($tokendata) {
-
-            $new_price = $this->request->getVar('pm_price');
             $pm_id = $this->request->getVar('pm_id');
+            $branch_id = $this->request->getVar('branch_id');
+            $pm_code = $this->request->getVar('pm_code');
+            $pm_name = $this->request->getVar('sp_pm_name');
 
+            $branchMap = [
+                0 => 'Abu Dhabi',
+                1 => 'Dubai'
+            ];
+            $branch_name = $branchMap[$branch_id];
+
+            $existingPart = $SparePartsMaster
+                ->where('pm_id', $pm_id)
+                ->first();
+
+            if (!$existingPart) {
+                return $this->fail("Part not found", 400);
+            }
+
+            $spmc_models = $spareModel
+                ->select('sp_model_code.spmc_value')
+                ->where('sp_spare_pm_id', $pm_id)
+                ->join('sp_model_code', 'sp_model_code.spmc_id = sp_spares.sp_spare_spmc_id', 'left')
+                ->findAll();
+
+            $spmc_models = array_column($spmc_models, 'spmc_value');
+
+            $old_price = floatval($existingPart['pm_price']);
+            $new_price = $this->request->getVar('pm_price');
 
             $userModel = new UserModel();
-            $user = $userModel->select('us_role_id')
+            $PartsMasterLog = new PartsMasterLogModel();
+
+            $user = $userModel->select('us_role_id, us_firstname')
                 ->where('us_id', $tokendata['uid'])
                 ->first();
 
@@ -211,6 +255,27 @@ class SparePartsController extends ResourceController
                 $updateParts = $SparePartsMaster->where('pm_id', $pm_id)->set($Sparedata)->update();
 
                 if ($updateParts) {
+                    $logNotes = "Admin Changed Price of "
+                        . $pm_name . "(" . $pm_code . ")"
+                        . " From  (Old Price): "
+                        . number_format($old_price, 2)
+                        . "  (New Price): "
+                        . number_format($new_price, 2)
+                        . " .Updated By User: "
+                        . $user['us_firstname']
+                        . " in " . $branch_name
+                        . " .Affected Models are: "
+                        . implode(", ", $spmc_models);
+
+                    $PartsMasterLog->insert([
+                        'pm_log_pm_id' => $pm_id,
+                        'pm_log_notes' => $logNotes,
+                        'pm_log_created_by' => $user['us_firstname'],
+                        'pm_log_created_on' => date("Y-m-d H:i:s"),
+                        'pm_log_branch' => $branch_id,
+                        'pm_log_delete_flag' => 0
+                    ]);
+
                     return $this->respond([
                         'ret_data' => 'admin_approved',
                         'message' => 'Price updated successfully.'
@@ -224,9 +289,6 @@ class SparePartsController extends ResourceController
             }
 
             // Else normal request-to-admin flow
-            $existingPart = $SparePartsMaster
-                ->where('pm_id', $pm_id)
-                ->first();
 
             if ($existingPart && !empty($existingPart['pm_new_price']) && floatval($existingPart['pm_new_price']) > 0) {
                 return $this->respond([
@@ -246,6 +308,24 @@ class SparePartsController extends ResourceController
             $updateParts = $SparePartsMaster->where('pm_id', $pm_id)->set($Sparedata)->update();
 
             if ($updateParts) {
+                $logNotes = "Price Change Requested for "
+                    . $pm_name . "(" . $pm_code . ")"
+                    . ". Requested By User: "
+                    . $user['us_firstname']
+                    . " (Old Price): "
+                    . number_format($old_price, 2)
+                    . " (New Price): "
+                    . number_format($new_price, 2)
+                    . " in " . $branch_name;
+
+                $PartsMasterLog->insert([
+                    'pm_log_pm_id' => $pm_id,
+                    'pm_log_notes' => $logNotes,
+                    'pm_log_created_by' => $user['us_firstname'],
+                    'pm_log_created_on' => date("Y-m-d H:i:s"),
+                    'pm_log_branch' => $branch_id,
+                    'pm_log_delete_flag' => 0
+                ]);
                 return $this->respond(['ret_data' => 'success'], 200);
             } else {
                 return $this->respond(['ret_data' => 'fail'], 200);
@@ -269,11 +349,13 @@ class SparePartsController extends ResourceController
         if ($tokendata['aud'] == 'superadmin') {
             $SuperModel = new SuperAdminModel();
             $super = $SuperModel->where("s_adm_id", $tokendata['uid'])->first();
-            if (!$super) return $this->fail("invalid user", 400);
+            if (!$super)
+                return $this->fail("invalid user", 400);
         } else if ($tokendata['aud'] == 'user') {
             $usmodel = new UserModel();
             $user = $usmodel->where("us_id", $tokendata['uid'])->first();
-            if (!$user) return $this->fail("invalid user", 400);
+            if (!$user)
+                return $this->fail("invalid user", 400);
         } else {
             $data['ret_data'] = "Invalid user";
             return $this->fail($data, 400);
@@ -319,11 +401,13 @@ class SparePartsController extends ResourceController
         if ($tokendata['aud'] == 'superadmin') {
             $SuperModel = new SuperAdminModel();
             $super = $SuperModel->where("s_adm_id", $tokendata['uid'])->first();
-            if (!$super) return $this->fail("invalid user", 400);
+            if (!$super)
+                return $this->fail("invalid user", 400);
         } else if ($tokendata['aud'] == 'user') {
             $usmodel = new UserModel();
             $user = $usmodel->where("us_id", $tokendata['uid'])->first();
-            if (!$user) return $this->fail("invalid user", 400);
+            if (!$user)
+                return $this->fail("invalid user", 400);
         } else {
             $data['ret_data'] = "Invalid user";
             return $this->fail($data, 400);
@@ -388,7 +472,7 @@ class SparePartsController extends ResourceController
                 $pm_code = trim($part['pm_code'] ?? '');
                 $sp_pm_name = trim($part['sp_pm_name'] ?? '');
                 $brand_name = trim($part['brand_name'] ?? '');
-                $brand_id   = $part['brand_id'] ?? null;
+                $brand_id = $part['brand_id'] ?? null;
                 // Skip if any field is null/empty
                 if ($pm_code === '' || $sp_pm_name === '' || $brand_id === '') {
                     continue;
@@ -448,17 +532,46 @@ class SparePartsController extends ResourceController
         if ($tokendata) {
 
             $SparePartsMaster = new SparePartsMaster();
+
             $requestedparts = $SparePartsMaster
-                ->select('parts_master.*, brand_list.brand_name, users.us_firstname, sp_item_master.spim_name')
+                ->select('parts_master.*, brand_list.brand_name, sp_item_master.spim_name, pm_price_requested_by')
                 ->where('pm_delete_flag', 0)
                 ->join('brand_list', 'brand_list.brand_id = pm_brand', 'left')
-                ->join('users', 'users.us_id = pm_price_requested_by', 'left')
                 ->join('sp_parts_master', 'sp_parts_master.sp_pm_id = pm_sp_pm_id', 'left')
                 ->join('sp_item_master', 'sp_item_master.spim_id = sp_pm_spim_id', 'left')
                 ->where('pm_new_price IS NOT NULL')
                 ->where('pm_new_price >', 0)
                 ->where('pm_new_price != pm_price')
                 ->findAll();
+
+            // Fetch users from main DB
+            $userIds = array_unique(array_column($requestedparts, 'pm_price_requested_by'));
+
+            if (!empty($userIds)) {
+                $users = $this->db
+                    ->table('users')
+                    ->select('us_id, us_firstname')
+                    ->whereIn('us_id', $userIds)
+                    ->get()
+                    ->getResultArray();
+
+                $userMap = array_column($users, 'us_firstname', 'us_id');
+
+                foreach ($requestedparts as &$row) {
+                    $row['us_firstname'] = $userMap[$row['pm_price_requested_by']] ?? null;
+                }
+            }
+            // $requestedparts = $SparePartsMaster
+            //     ->select('parts_master.*, brand_list.brand_name, users.us_firstname, sp_item_master.spim_name')
+            //     ->where('pm_delete_flag', 0)
+            //     ->join('brand_list', 'brand_list.brand_id = pm_brand', 'left')
+            //     ->join('users', 'users.us_id = pm_price_requested_by', 'left')
+            //     ->join('sp_parts_master', 'sp_parts_master.sp_pm_id = pm_sp_pm_id', 'left')
+            //     ->join('sp_item_master', 'sp_item_master.spim_id = sp_pm_spim_id', 'left')
+            //     ->where('pm_new_price IS NOT NULL')
+            //     ->where('pm_new_price >', 0)
+            //     ->where('pm_new_price != pm_price')
+            //     ->findAll();
 
             if (count($requestedparts) > 0) {
                 $response = [
@@ -579,15 +692,55 @@ class SparePartsController extends ResourceController
         if ($tokendata) {
 
             $SparePartsMaster = new SparePartsMaster();
+            $spareModel = new ServicePackageSpareModel();
+
+            $pm_id = $this->request->getVar('pm_id');
+            $branch_id = $this->request->getVar('branch_id');
+            $pm_code = $this->request->getVar('pm_code');
+            $pm_name = $this->request->getVar('pm_name');
+
+
+            $branchMap = [
+                0 => 'Abu Dhabi',
+                1 => 'Dubai'
+            ];
+            $branch_name = $branchMap[$branch_id];
+
+            $existingPart = $SparePartsMaster->select('*')
+                ->where('pm_delete_flag', 0)
+                ->where('pm_id', $pm_id)
+                ->first();
+
+            // echo "<pre>";
+            // print_r($existingPart);
+            // exit;
+
+            if (!$existingPart) {
+                return $this->fail("Part not found", 400);
+            }
+
+            $spmc_models = $spareModel
+                ->select('sp_model_code.spmc_value')
+                ->where('sp_spare_pm_id', $pm_id)
+                ->join('sp_model_code', 'sp_model_code.spmc_id = sp_spares.sp_spare_spmc_id', 'left')
+                ->findAll();
+
+            $spmc_models = array_column($spmc_models, 'spmc_value');
+
+            $old_price = floatval($existingPart['pm_price']);
+            $new_price = $this->request->getVar('pm_price');
+
+            $userModel = new UserModel();
+            $PartsMasterLog = new PartsMasterLogModel();
 
             $pm_code = $this->request->getVar('pm_code');
             $pm_brand = $this->request->getVar('pm_brand');
             $pm_new_price = $this->request->getVar('pm_new_price');
-            $old_price  = $this->request->getVar('pm_price');
-            $pm_id  = $this->request->getVar('pm_id');
-            $multiple     = $this->request->getVar('multiple');     // e.g. 10
-            $rounding     = $this->request->getVar('rounding');     // e.g. 'nearest_threshold'
-            $threshold    = $this->request->getVar('threshold');    // e.g. 5
+            $old_price = $this->request->getVar('pm_price');
+            $pm_id = $this->request->getVar('pm_id');
+            $multiple = $this->request->getVar('multiple');     // e.g. 10
+            $rounding = $this->request->getVar('rounding');     // e.g. 'nearest_threshold'
+            $threshold = $this->request->getVar('threshold');    // e.g. 5
 
 
             $price_diff = $pm_new_price - $old_price; // can be negative
@@ -612,10 +765,6 @@ class SparePartsController extends ResourceController
 
                 if (!empty($ids['spmcIds']) && !empty($ids['kmIds'])) {
 
-                    // echo '<pre>';
-                    // print_r($ids);
-                    // echo '</pre>';
-
                     // Now call ServicePackageKmPriceModel with returned IDs
                     $spKmPriceModel = new ServicePackageKmPriceModel();
                     $summary = $spKmPriceModel->processUniqueIds(
@@ -637,20 +786,43 @@ class SparePartsController extends ResourceController
                             ->update();
 
                         $response = [
-                            'ret_data'     => 'success',
-                            'pm_code'      => $pm_code,
-                            'brand_name'   => $pm_brand,
+                            'ret_data' => 'success',
+                            'pm_code' => $pm_code,
+                            'brand_name' => $pm_brand,
                             'pm_new_price' => $pm_new_price,
-                            'summary'      => $summary
+                            'summary' => $summary
                         ];
+
+                        $logNotes = "Admin Changed Price of "
+                            . $pm_name . "(" . $pm_code . ")"
+                            . " From  (Old Price): "
+                            . number_format($old_price, 2)
+                            . "  (New Price): "
+                            . number_format($new_price, 2)
+                            . ". Updated By User: "
+                            . $user['us_firstname']
+                            . " in " . $branch_name
+                            . ". Affected Models: "
+                            . implode(", ", $spmc_models);
+
+                        $PartsMasterLog->insert([
+                            'pm_log_pm_id' => $pm_id,
+                            'pm_log_notes' => $logNotes,
+                            'pm_log_created_by' => $user['us_firstname'],
+                            'pm_log_created_on' => date("Y-m-d H:i:s"),
+                            'pm_log_branch' => $branch_id,
+                            'pm_log_delete_flag' => 0
+                        ]);
+
+
                         return $this->respond($response, 200);
                     } else {
                         $response = [
-                            'ret_data'     => 'fail',
-                            'pm_code'      => $pm_code,
-                            'brand_name'   => $pm_brand,
+                            'ret_data' => 'fail',
+                            'pm_code' => $pm_code,
+                            'brand_name' => $pm_brand,
                             'pm_new_price' => $pm_new_price,
-                            'summary'      => "failed from Servicepackage Km price map Model"
+                            'summary' => "failed from Servicepackage Km price map Model"
                         ];
                         return $this->respond($response, 200);
                     }
@@ -946,10 +1118,38 @@ class SparePartsController extends ResourceController
         }
         if ($tokendata) {
 
-
+            $spareModel = new ServicePackageSpareModel();
             $SparePartsMaster = new SparePartsMaster();
             $pm_code = $this->request->getVar('pm_code');
             $pm_brand = $this->request->getVar('pm_brand');
+
+            $pm_id = $this->request->getVar('pm_id');
+            $branch_id = $this->request->getVar('branch_id');
+            $pm_name = $this->request->getVar('pm_name');
+
+            $branchMap = [
+                0 => 'Abu Dhabi',
+                1 => 'Dubai'
+            ];
+            $branch_name = $branchMap[$branch_id];
+
+            $existingPart = $SparePartsMaster
+                ->where('pm_id', $pm_id)
+                ->first();
+
+
+            $old_price = floatval($existingPart['pm_price']);
+
+            $userModel = new UserModel();
+            $PartsMasterLog = new PartsMasterLogModel();
+
+            $user = $userModel->select('us_role_id, us_firstname')
+                ->where('us_id', $tokendata['uid'])
+                ->first();
+
+            if (!$user) {
+                return $this->fail("Invalid user", 400);
+            }
 
 
             $requestedparts = $SparePartsMaster
@@ -967,6 +1167,23 @@ class SparePartsController extends ResourceController
                     ->set('pm_new_price', 0)
                     ->update();
 
+                $logNotes = "Admin Declined Price Change of "
+                    . $pm_name . "(" . $pm_code . ")"
+                    . " Existing Price: "
+                    . number_format($old_price, 2)
+                    . ". Updated By User: "
+                    . $user['us_firstname']
+                    . " in " . $branch_name;
+
+                $PartsMasterLog->insert([
+                    'pm_log_pm_id' => $pm_id,
+                    'pm_log_notes' => $logNotes,
+                    'pm_log_created_by' => $user['us_firstname'],
+                    'pm_log_created_on' => date("Y-m-d H:i:s"),
+                    'pm_log_branch' => $branch_id,
+                    'pm_log_delete_flag' => 0
+                ]);
+
                 $response = [
                     'ret_data' => 'success',
                 ];
@@ -975,6 +1192,53 @@ class SparePartsController extends ResourceController
                     'ret_data' => 'fail',
                 ];
             }
+            return $this->respond($response, 200);
+        }
+    }
+
+    public function getPartsLog()
+    {
+        $common = new Common();
+        $valid = new Validation();
+        $heddata = $this->request->headers();
+        $tokendata = $common->decode_jwt_token($valid->getbearertoken($heddata['Authorization']));
+
+        if ($tokendata['aud'] == 'superadmin') {
+            $SuperModel = new SuperAdminModel();
+            $super = $SuperModel->where("s_adm_id", $tokendata['uid'])->first();
+            if (!$super)
+                return $this->fail("invalid user", 400);
+        } else if ($tokendata['aud'] == 'user') {
+            $usmodel = new UserModel();
+            $user = $usmodel->where("us_id", $tokendata['uid'])->first();
+            if (!$user)
+                return $this->fail("invalid user", 400);
+        } else {
+            $data['ret_data'] = "Invalid user";
+            return $this->fail($data, 400);
+        }
+        if ($tokendata) {
+            $partsLogModel = new PartsMasterLogModel();
+            $pm_id = $this->request->getVar('pm_id');
+
+            $partsLog = $partsLogModel
+                ->where('pm_log_pm_id', $pm_id)
+                ->where('pm_log_delete_flag', 0)
+                ->orderBy('pm_log_created_on', 'DESC')
+                ->findAll();
+
+            if (count($partsLog) > 0) {
+
+                $response = [
+                    'ret_data' => 'success',
+                    'partsLog' => $partsLog,
+                ];
+            } else {
+                $response = [
+                    'ret_data' => 'fail',
+                ];
+            }
+
             return $this->respond($response, 200);
         }
     }

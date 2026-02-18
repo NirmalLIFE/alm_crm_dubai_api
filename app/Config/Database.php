@@ -51,6 +51,27 @@ class Database extends Config
         'port'     => 3306,
     ];
 
+    public $commonDB = [
+        'DSN'      => '',
+        'hostname' => 'localhost',
+        'username' => '',        // your DB username
+        'password' => '',            // your DB password
+        'database' => '',  // your second DB name
+        'DBDriver' => 'MySQLi',
+        'DBPrefix' => '',
+        'pConnect' => false,
+        'DBDebug'  => (ENVIRONMENT !== 'production'),
+        'charset'  => 'utf8mb4',
+        'DBCollat' => 'utf8mb4_unicode_ci',
+        'swapPre'  => '',
+        'encrypt'  => false,
+        'compress' => false,
+        'strictOn' => false,
+        'failover' => [],
+        'port'     => 3306,
+    ];
+
+
 
 
     public $secondary = [

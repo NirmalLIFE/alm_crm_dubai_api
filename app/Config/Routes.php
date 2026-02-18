@@ -521,8 +521,16 @@ $routes->post("getCustomerRegNo", "ServicePackage/ServicePackageController::getC
 
 
 
-
-
+//Service Contract Package
+$routes->post('checkVehicleServiceContract', 'ServiceContract/ServiceContractController::checkVehicleServiceContract', ['filter' => 'authFilter']);
+$routes->resource('ServiceContract/ServiceContractController', ['filter' => 'authFilter']);
+$routes->post("updateContractTierDetails", "ServiceContract/ServiceContractController::updateContractTierDetails", ['filter' => 'authFilter']);
+$routes->post("checkCustomerByPhone", "ServiceContract/ServiceContractController::checkCustomerByPhone", ['filter' => 'authFilter']);
+$routes->post("createServiceContractTier", "ServiceContract/ServiceContractController::createServiceContractTier", ['filter' => 'authFilter']);
+$routes->post("deleteServiceContractTier", "ServiceContract/ServiceContractController::deleteServiceContractTier", ['filter' => 'authFilter']);
+$routes->get('getServiceContractCustomers', 'ServiceContract/ServiceContractController::getServiceContractCustomers', ['filter' => 'authFilter']);
+$routes->post("getVehicleDetailsByVinNo", "ServiceContract/ServiceContractController::getVehicleDetailsByVinNo", ['filter' => 'authFilter']);
+$routes->post("getPartsLog", "SpareParts/SparePartsController::getPartsLog", ['filter' => 'authFilter']);
 
 
 

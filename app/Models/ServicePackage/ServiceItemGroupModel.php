@@ -6,7 +6,7 @@ use CodeIgniter\Model;
 
 class ServiceItemGroupModel extends Model
 {
-    protected $DBGroup          = 'default';
+    protected $DBGroup          = 'commonDB';
     protected $table            = 'sp_item_group';
     protected $primaryKey       = 'sp_ig_id';
     protected $useAutoIncrement = true;

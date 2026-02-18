@@ -21,6 +21,8 @@ class YeaStarController extends ResourceController
         $common = new Common();
         $valid = new Validation();
 
+log_message('error', '===== getCDRDetails API HIT =====');
+
         $heddata = $this->request->headers();
         $tokendata = $common->decode_jwt_token($valid->getbearertoken($heddata['Authorization']));
 
@@ -44,6 +46,14 @@ class YeaStarController extends ResourceController
             $call_to = $this->request->getVar('call_to');
             $call_from = $this->request->getVar('call_from');
             $selected_trunk = $this->request->getVar('selected_trunk');
+            log_message('error', 'call_type: ' . $call_type);
+log_message('error', 'start_day: ' . $start_day);
+log_message('error', 'end_day: ' . $end_day);
+log_message('error', 'disposition: ' . $disposition);
+log_message('error', 'call_to: ' . $call_to);
+log_message('error', 'call_from: ' . $call_from);
+log_message('error', 'selected_trunk: ' . $selected_trunk);
+
             if (isset($call_type)) {
                 $fields['call_type'] = $call_type;
                 if (isset($start_day) && isset($end_day)) {

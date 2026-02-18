@@ -6,7 +6,7 @@ use CodeIgniter\Model;
 
 class ServicePackagePartsModel extends Model
 {
-    protected $DBGroup          = 'default';
+    protected $DBGroup          = 'commonDB';
     protected $table            = 'sp_parts_master';
     protected $primaryKey       = 'sp_pm_id';
     protected $useAutoIncrement = true;

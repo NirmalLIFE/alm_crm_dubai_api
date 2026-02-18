@@ -6,7 +6,7 @@ use CodeIgniter\Model;
 
 class SPItemMaster extends Model
 {
-    protected $DBGroup          = 'default';
+    protected $DBGroup          = 'commonDB';
     protected $table            = 'sp_item_master';
     protected $primaryKey       = 'spim_id';
     protected $useAutoIncrement = true;

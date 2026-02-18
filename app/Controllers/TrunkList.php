@@ -142,7 +142,7 @@ class TrunkList extends ResourceController
                 'ret_data' => 'success',
                 'dept' => $res,
                 'trunk' => $tr,
-                'trunk_name' => $result,
+                // 'trunk_name' => $result,
                 'featurelist' => $ftr,
                 'dept_ft' => $depftr
             ];

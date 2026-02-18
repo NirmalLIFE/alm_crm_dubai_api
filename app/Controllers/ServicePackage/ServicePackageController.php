@@ -921,7 +921,7 @@ class ServicePackageController extends ResourceController
         //
     }
 
-    public function getServicePackage()
+        public function getServicePackage()
     {
 
         $common = new Common();
@@ -951,198 +951,412 @@ class ServicePackageController extends ResourceController
             $Sp_KmPrice_Model = new ServicePackageKmPriceModel();
             $ServicePackageModelCodeLabourModel = new ServicePackageModelCodeLabourModel();
 
-
             $modelCode = $this->request->getVar('modelCode');
             $modelYear = $this->request->getVar('modelYear');
             $variant = $this->request->getVar('variant');
-
             $kilometer = $this->request->getVar('kilometer');
-
-            // $km_id = $this->request->getVar('kilometer');
             $model_id = null;
 
-            // $kmData = $kmModel->where('km_value', $kilometer)->where('km_delete_flag', 0)->first();
-            // if ($kmData) {
-            //     $km_id = $kmData['km_id'];
-            // }
-
-            //PRIVOUS CHECHING FOR THE MODEL CODE............
-            // $modelData = $ServicePackageModelCodeModel->where("spmc_delete_flag", 0)
-            //     ->where("spmc_value", $modelCode)
-            //     ->first();
-
+            // Case 1: Search by Model Code
             if (!empty($modelCode)) {
-                $modelData = $ServicePackageModelCodeModel
+                $modelDataList = $ServicePackageModelCodeModel
                     ->where('spmc_delete_flag', 0)
                     ->where('spmc_value', $modelCode)
-                    ->first();
+                    ->findAll(); // Return all model codes with same code
             }
-            // Case 2: Search by Year and Variant only
+            // Case 2: Search by Year and Variant
             else if (!empty($modelYear) && !empty($variant)) {
-                $modelData = $ServicePackageModelCodeModel
+                $singleModel = $ServicePackageModelCodeModel
                     ->where('spmc_delete_flag', 0)
                     ->where('spmc_model_year', $modelYear)
                     ->where('spmc_variant', $variant)
                     ->first();
+
+                $modelDataList = $singleModel ? [$singleModel] : [];
+            } else {
+                $modelDataList = [];
             }
 
-            if (!empty($modelData)) {
+            // If models found
+            if (!empty($modelDataList)) {
+
+                // Fetch labour data for the selected model
                 $modelLabourData = $ServicePackageModelCodeLabourModel
-                    ->where('model_code', $modelData['spmc_value'])
+                    ->select('spmcl_type')
+                    ->where('model_code', $modelCode)
                     ->where('spmcl_delete_flag', 0)
                     ->first();
-            }
-            $labourFactor = 0;
+                // Initialize final array
+                $finalModels = [];
 
-            if (!empty($modelLabourData)) {
-                $labourRate = (float) $modelLabourData['labour_rate'];
-                $increasePct = (float) $modelLabourData['spmcl_inc_pct'];
+                if ($modelLabourData && $modelLabourData['spmcl_type'] == '1') {
+                    // ✅ CASE 1: spmcl_type == 1 → take ALL model packages
+                    $modelsToProcess = $modelDataList;
+                } else {
+                    // ✅ CASE 2: spmcl_type != 1 → take ONLY the first package
+                    $modelsToProcess = [reset($modelDataList)]; // reset() returns the first element
+                }
 
-                // Add increased percentage to labour rate
-                $labourFactor = $labourRate + ($labourRate * $increasePct / 100);
-            }
+                // Loop through selected models (based on above condition)
+                foreach ($modelsToProcess as $modelData) {
 
-            // if (!$modelData) {
-            //     $possibleMatches = $ServicePackageModelCodeModel
-            //         ->where('spmc_delete_flag', 0)
-            //         ->where('spmc_value', $modelCode)
-            //         ->where('spmc_variant', $variant)
-            //         ->findAll();
+                    // 🔹 Fetch labour factor
+                    $modelLabourData = $ServicePackageModelCodeLabourModel
+                        ->where('model_code', $modelData['spmc_value'])
+                        ->where('spmcl_delete_flag', 0)
+                        ->first();
 
-            //     $closest = null;
-            //     $smallestDiff = null;
+                    $labourFactor = 0;
+                    if (!empty($modelLabourData)) {
+                        $labourRate = (float) $modelLabourData['labour_rate'];
+                        $increasePct = (float) $modelLabourData['spmcl_inc_pct'];
+                        $labourFactor = $labourRate + ($labourRate * $increasePct / 100);
+                    }
 
-            //     foreach ($possibleMatches as $match) {
-            //         $year = (int)$match['spmc_model_year'];
-            //         $diff = abs($year - (int)$modelYear);
+                    $model_id = $modelData['spmc_id'];
 
-            //         if (is_null($smallestDiff) || $diff < $smallestDiff) {
-            //             $closest = $match;
-            //             $smallestDiff = $diff;
-            //         }
-            //     }
-            //     if (!$modelData && $closest) {
-            //         $modelData = $closest;
-            //     }
-            // }
+                    // 🔹 Engine details
+                    $engineDetails = $ServicePackageEnginesModel->select('eng_id,eng_no,speng_spmc_id,eng_labour_factor')
+                        ->where("speng_delete_flag", 0)
+                        ->where("speng_spmc_id", $model_id)
+                        ->join('engine_master', 'engine_master.eng_id = speng_eng_id', 'left')
+                        ->first();
 
-            if (!empty($modelData)) {
+                    // 🔹 Fetch price map for each km
+                    $kmPriceMap = $Sp_KmPrice_Model->table('sp_km_price_map')
+                        ->select('spkmp_spkm_id, spkmp_markup_price, spkmp_display_price')
+                        ->where('spkmp_spmc_id', $model_id)
+                        ->get()
+                        ->getResultArray();
 
-                $model_id = $modelData['spmc_id'];
+                    $kmPriceMapById = [];
+                    foreach ($kmPriceMap as $row) {
+                        $kmPriceMapById[$row['spkmp_spkm_id']] = [
+                            'markup_price' => $row['spkmp_markup_price'],
+                            'display_price' => $row['spkmp_display_price'],
+                        ];
+                    }
 
-                $engineDetails = $ServicePackageEnginesModel->select('eng_id,eng_no,speng_spmc_id,eng_labour_factor')
-                    ->where("speng_delete_flag", 0)
-                    ->where("speng_spmc_id", $model_id)
-                    ->join('engine_master', 'engine_master.eng_id = speng_eng_id', 'left')
-                    ->first();
+                    // 🔹 Get Spares
+                    $spares = $SP_Parts_Model
+                        ->select('spim_name, pm_price, spkm_km_optional_flag, pm_code, sp_spare_category, sp_spare_qty, sp_spare_id, sp_spare_optional_flag, spkm_km_id, sp_spare_group_seq, sp_spare_labour_unit, km_value, sp_km_item_map.spkm_delete_flag')
+                        ->where('sp_spare_spmc_id', $model_id)
+                        ->where('sp_spare_delete_flag', 0)
+                        ->join('parts_master', 'parts_master.pm_id = sp_spare_pm_id', 'left')
+                        ->join('sp_parts_master', 'sp_parts_master.sp_pm_id = pm_sp_pm_id', 'left')
+                        ->join('sp_item_master', 'sp_item_master.spim_id = sp_pm_spim_id', 'left')
+                        ->join('sp_km_item_map', 'sp_km_item_map.spkm_item_id = sp_spare_id AND sp_km_item_map.spkm_item_type = 0 AND sp_km_item_map.spkm_delete_flag = 0', 'left')
+                        ->join('kilometer_master', 'kilometer_master.km_id = spkm_km_id', 'left')
+                        ->findAll();
 
+                    // 🔹 Get Labours
+                    $labours = $SP_Labours_Model
+                        ->select('spim_name, spkm_km_optional_flag, sp_pm_category, sp_labour_qty, sp_labour_id, sp_labour_optional_flag, sp_labour_group_seq, spkm_km_id, sp_labour_unit, km_value, sp_km_item_map.spkm_delete_flag')
+                        ->where('sp_labour_spmc_id', $model_id)
+                        ->where('sp_labour_delete_flag', 0)
+                        ->join('sp_parts_master', 'sp_parts_master.sp_pm_id = sp_labour_lm_id', 'left')
+                        ->join('sp_item_master', 'sp_item_master.spim_id = sp_pm_spim_id', 'left')
+                        ->join(
+                            'sp_km_item_map',
+                            'sp_km_item_map.spkm_item_id = sp_labour_id AND sp_km_item_map.spkm_item_type = 1 AND sp_km_item_map.spkm_delete_flag = 0',
+                            'left'
+                        )
+                        ->join('kilometer_master', 'kilometer_master.km_id = spkm_km_id', 'left')
+                        ->findAll();
 
-                // Fetch price map for each km
-                $kmPriceMap = $Sp_KmPrice_Model->table('sp_km_price_map')
-                    ->select('spkmp_spkm_id, spkmp_markup_price, spkmp_display_price')
-                    ->where('spkmp_spmc_id', $model_id)
-                    ->get()
-                    ->getResultArray();
+                    // 🔹 Combine and group by km_id
+                    $combinedByKm = [];
 
-                $kmPriceMapById = [];
-                foreach ($kmPriceMap as $row) {
-                    $kmPriceMapById[$row['spkmp_spkm_id']] = [
-                        'markup_price' => $row['spkmp_markup_price'],
-                        'display_price' => $row['spkmp_display_price'],
+                    foreach ($spares as $spare) {
+                        if (!empty($spare['spkm_km_id'])) {
+                            $km_id = $spare['spkm_km_id'];
+                            $spare['item_type'] = 0;
+                            $combinedByKm[$km_id]['items'][] = $spare;
+                            $combinedByKm[$km_id]['km_value'] = $spare['km_value'];
+                        }
+                    }
+
+                    foreach ($labours as $labour) {
+                        if (!empty($labour['spkm_km_id'])) {
+                            $km_id = $labour['spkm_km_id'];
+                            $labour['item_type'] = 1;
+                            $combinedByKm[$km_id]['items'][] = $labour;
+                            $combinedByKm[$km_id]['km_value'] = $labour['km_value'];
+                        }
+                    }
+
+                    // 🔹 Build final structure per model
+                    $final = [];
+                    foreach ($combinedByKm as $km_id => $data) {
+                        $final[] = [
+                            'km_id' => $km_id,
+                            'km_value' => $data['km_value'] ?? '',
+                            'actual_price' => $kmPriceMapById[$km_id]['markup_price'] ?? 0,
+                            'display_price' => $kmPriceMapById[$km_id]['display_price'] ?? 0,
+                            'items' => $data['items'],
+                        ];
+                    }
+
+                    // 🔹 Add to final array
+                    $finalModels[] = [
+                        'modelId' => $modelData['spmc_id'],
+                        'modelYearUsed' => $modelData['spmc_model_year'] ?? null,
+                        'Vin_No' => $modelData['spmc_vin_no'] ?? null,
+                        'spmc_type' => $modelData['spmc_type'] ?? null,
+                        'spmc_status_flag' => $modelData['spmc_status_flag'] ?? null,
+                        'servicePackage' => $final,
+                        'engineDetails' => $engineDetails,
+                        'labourFactor' => $labourFactor,
                     ];
                 }
 
-                // Get Spares
-                $spares = $SP_Parts_Model
-                    ->select('spim_name, pm_price,spkm_km_optional_flag,pm_code,sp_spare_category, sp_spare_qty, sp_spare_id, sp_spare_optional_flag, spkm_km_id,sp_spare_group_seq, sp_spare_labour_unit, km_value')
-                    ->where('sp_spare_spmc_id', $model_id)
-                    ->where('sp_spare_delete_flag', 0)
-                    ->join('parts_master', 'parts_master.pm_id = sp_spare_pm_id', 'left')
-                    ->join('sp_parts_master', 'sp_parts_master.sp_pm_id = pm_sp_pm_id', 'left')
-                    ->join('sp_item_master', 'sp_item_master.spim_id = sp_pm_spim_id', 'left')
-                    ->join('sp_km_item_map', 'sp_km_item_map.spkm_item_id = sp_spare_id AND sp_km_item_map.spkm_item_type = 0 AND sp_km_item_map.spkm_delete_flag = 0', 'left')
-                    ->join('kilometer_master', 'kilometer_master.km_id = spkm_km_id', 'left')
-                    ->findAll();
-
-                // Get Labours
-                $labours = $SP_Labours_Model
-                    ->select('spim_name,spkm_km_optional_flag, sp_pm_category, sp_labour_qty, sp_labour_id, sp_labour_optional_flag,sp_labour_group_seq, spkm_km_id, sp_labour_unit, km_value')
-                    ->where('sp_labour_spmc_id', $model_id)
-                    ->where('sp_labour_delete_flag', 0)
-                    ->join('sp_parts_master', 'sp_parts_master.sp_pm_id = sp_labour_lm_id', 'left')
-                    ->join('sp_item_master', 'sp_item_master.spim_id = sp_pm_spim_id', 'left')
-                    ->join(
-                        'sp_km_item_map',
-                        'sp_km_item_map.spkm_item_id = sp_labour_id AND sp_km_item_map.spkm_item_type = 1 AND sp_km_item_map.spkm_delete_flag = 0',
-                        'left'
-                    )
-                    ->join('kilometer_master', 'kilometer_master.km_id = spkm_km_id', 'left')
-                    ->findAll();
-
-                // Combine and group by km_id
-                $combinedByKm = [];
-
-                foreach ($spares as $spare) {
-                    if (!empty($spare['spkm_km_id'])) {
-                        $km_id = $spare['spkm_km_id'];
-                        $spare['item_type'] = 0;
-                        $combinedByKm[$km_id]['items'][] = $spare;
-                        $combinedByKm[$km_id]['km_value'] = $spare['km_value'];
-                    }
-                }
-
-                foreach ($labours as $labour) {
-                    if (!empty($labour['spkm_km_id'])) {
-                        $km_id = $labour['spkm_km_id'];
-                        $labour['item_type'] = 1;
-                        $combinedByKm[$km_id]['items'][] = $labour;
-                        $combinedByKm[$km_id]['km_value'] = $labour['km_value'];
-                    }
-                }
-
-                // Final structure
-                $final = [];
-                foreach ($combinedByKm as $km_id => $data) {
-                    $final[] = [
-                        'km_id' => $km_id,
-                        'km_value' => $data['km_value'] ?? '',
-                        'actual_price' => $kmPriceMapById[$km_id]['markup_price'] ?? 0,
-                        'display_price' => $kmPriceMapById[$km_id]['display_price'] ?? 0,
-                        'items' => $data['items'],
+                if ($modelLabourData && $modelLabourData['spmcl_type'] == '1') {
+                    // ✅ CASE 1: spmcl_type == 1 → take ALL model packages
+                    $modelsToProcess = $modelDataList;
+                    $response = [
+                        'ret_data' => 'success',
+                        'models' => $finalModels,
+                        'spmcl_type' => $modelLabourData['spmcl_type'],
+                    ];
+                } else {
+                    $response = [
+                        'ret_data' => 'success',
+                        'models' => $finalModels,
+                        'spmcl_type' => 0,
                     ];
                 }
-            } else {
-                $final = [];
-            }
-
-
-            if (!empty($final)) {
-                $response = [
-                    'ret_data' => 'success',
-                    'servicePackage' => $final,
-                    'engineDetails' => $engineDetails,
-                    'labourFactor' => $labourFactor,
-                    'modelId' => $modelData['spmc_id'],
-                    'modelYearUsed' => $modelData['spmc_model_year'] ?? null, // Optional: show used year
-                    'Vin_No' => $modelData['spmc_vin_no'] ?? null, // Optional: show used Vin No
-                ];
-            } else if (!empty($modelData)) {
-                $response = [
-                    'ret_data' => 'success',
-                    'modelData' => $modelData,
-                    'modelYearUsed' => $modelData['spmc_model_year'] ?? null,
-                    'message' => 'Model found, but no service package items available.',
-                    'Vin_No' => $modelData['spmc_vin_no'] ?? null, // Optional: show used Vin No
-                ];
             } else {
                 $response = [
                     'ret_data' => 'fail',
-
                 ];
             }
+
             return $this->respond($response, 200);
         }
     }
+
+    // public function getServicePackage()
+    // {
+
+    //     $common = new Common();
+    //     $valid = new Validation();
+    //     $heddata = $this->request->headers();
+    //     $tokendata = $common->decode_jwt_token($valid->getbearertoken($heddata['Authorization']));
+
+    //     if ($tokendata['aud'] == 'superadmin') {
+    //         $SuperModel = new SuperAdminModel();
+    //         $super = $SuperModel->where("s_adm_id", $tokendata['uid'])->first();
+    //         if (!$super) return $this->fail("invalid user", 400);
+    //     } else if ($tokendata['aud'] == 'user') {
+    //         $usmodel = new UserModel();
+    //         $user = $usmodel->where("us_id", $tokendata['uid'])->first();
+    //         if (!$user) return $this->fail("invalid user", 400);
+    //     } else {
+    //         $data['ret_data'] = "Invalid user";
+    //         return $this->fail($data, 400);
+    //     }
+    //     if ($tokendata) {
+
+    //         $ServicePackageModelCodeModel = new ServicePackageModelCodeModel();
+    //         $kmModel = new KilometerMasterModel();
+    //         $SP_Parts_Model = new ServicePackageSpareModel();
+    //         $SP_Labours_Model = new ServicePackageLabourModel();
+    //         $ServicePackageEnginesModel = new ServicePackageEnginesModel();
+    //         $Sp_KmPrice_Model = new ServicePackageKmPriceModel();
+    //         $ServicePackageModelCodeLabourModel = new ServicePackageModelCodeLabourModel();
+
+
+    //         $modelCode = $this->request->getVar('modelCode');
+    //         $modelYear = $this->request->getVar('modelYear');
+    //         $variant = $this->request->getVar('variant');
+
+    //         $kilometer = $this->request->getVar('kilometer');
+
+    //         // $km_id = $this->request->getVar('kilometer');
+    //         $model_id = null;
+
+    //         // $kmData = $kmModel->where('km_value', $kilometer)->where('km_delete_flag', 0)->first();
+    //         // if ($kmData) {
+    //         //     $km_id = $kmData['km_id'];
+    //         // }
+
+    //         //PRIVOUS CHECHING FOR THE MODEL CODE............
+    //         // $modelData = $ServicePackageModelCodeModel->where("spmc_delete_flag", 0)
+    //         //     ->where("spmc_value", $modelCode)
+    //         //     ->first();
+
+    //         if (!empty($modelCode)) {
+    //             $modelData = $ServicePackageModelCodeModel
+    //                 ->where('spmc_delete_flag', 0)
+    //                 ->where('spmc_value', $modelCode)
+    //                 ->first();
+    //         }
+    //         // Case 2: Search by Year and Variant only
+    //         else if (!empty($modelYear) && !empty($variant)) {
+    //             $modelData = $ServicePackageModelCodeModel
+    //                 ->where('spmc_delete_flag', 0)
+    //                 ->where('spmc_model_year', $modelYear)
+    //                 ->where('spmc_variant', $variant)
+    //                 ->first();
+    //         }
+
+    //         if (!empty($modelData)) {
+    //             $modelLabourData = $ServicePackageModelCodeLabourModel
+    //                 ->where('model_code', $modelData['spmc_value'])
+    //                 ->where('spmcl_delete_flag', 0)
+    //                 ->first();
+    //         }
+    //         $labourFactor = 0;
+
+    //         if (!empty($modelLabourData)) {
+    //             $labourRate = (float) $modelLabourData['labour_rate'];
+    //             $increasePct = (float) $modelLabourData['spmcl_inc_pct'];
+
+    //             // Add increased percentage to labour rate
+    //             $labourFactor = $labourRate + ($labourRate * $increasePct / 100);
+    //         }
+
+    //         // if (!$modelData) {
+    //         //     $possibleMatches = $ServicePackageModelCodeModel
+    //         //         ->where('spmc_delete_flag', 0)
+    //         //         ->where('spmc_value', $modelCode)
+    //         //         ->where('spmc_variant', $variant)
+    //         //         ->findAll();
+
+    //         //     $closest = null;
+    //         //     $smallestDiff = null;
+
+    //         //     foreach ($possibleMatches as $match) {
+    //         //         $year = (int)$match['spmc_model_year'];
+    //         //         $diff = abs($year - (int)$modelYear);
+
+    //         //         if (is_null($smallestDiff) || $diff < $smallestDiff) {
+    //         //             $closest = $match;
+    //         //             $smallestDiff = $diff;
+    //         //         }
+    //         //     }
+    //         //     if (!$modelData && $closest) {
+    //         //         $modelData = $closest;
+    //         //     }
+    //         // }
+
+    //         if (!empty($modelData)) {
+
+    //             $model_id = $modelData['spmc_id'];
+
+    //             $engineDetails = $ServicePackageEnginesModel->select('eng_id,eng_no,speng_spmc_id,eng_labour_factor')
+    //                 ->where("speng_delete_flag", 0)
+    //                 ->where("speng_spmc_id", $model_id)
+    //                 ->join('engine_master', 'engine_master.eng_id = speng_eng_id', 'left')
+    //                 ->first();
+
+
+    //             // Fetch price map for each km
+    //             $kmPriceMap = $Sp_KmPrice_Model->table('sp_km_price_map')
+    //                 ->select('spkmp_spkm_id, spkmp_markup_price, spkmp_display_price')
+    //                 ->where('spkmp_spmc_id', $model_id)
+    //                 ->get()
+    //                 ->getResultArray();
+
+    //             $kmPriceMapById = [];
+    //             foreach ($kmPriceMap as $row) {
+    //                 $kmPriceMapById[$row['spkmp_spkm_id']] = [
+    //                     'markup_price' => $row['spkmp_markup_price'],
+    //                     'display_price' => $row['spkmp_display_price'],
+    //                 ];
+    //             }
+
+    //             // Get Spares
+    //             $spares = $SP_Parts_Model
+    //                 ->select('spim_name, pm_price,spkm_km_optional_flag,pm_code,sp_spare_category, sp_spare_qty, sp_spare_id, sp_spare_optional_flag, spkm_km_id,sp_spare_group_seq, sp_spare_labour_unit, km_value')
+    //                 ->where('sp_spare_spmc_id', $model_id)
+    //                 ->where('sp_spare_delete_flag', 0)
+    //                 ->join('parts_master', 'parts_master.pm_id = sp_spare_pm_id', 'left')
+    //                 ->join('sp_parts_master', 'sp_parts_master.sp_pm_id = pm_sp_pm_id', 'left')
+    //                 ->join('sp_item_master', 'sp_item_master.spim_id = sp_pm_spim_id', 'left')
+    //                 ->join('sp_km_item_map', 'sp_km_item_map.spkm_item_id = sp_spare_id AND sp_km_item_map.spkm_item_type = 0 AND sp_km_item_map.spkm_delete_flag = 0', 'left')
+    //                 ->join('kilometer_master', 'kilometer_master.km_id = spkm_km_id', 'left')
+    //                 ->findAll();
+
+    //             // Get Labours
+    //             $labours = $SP_Labours_Model
+    //                 ->select('spim_name,spkm_km_optional_flag, sp_pm_category, sp_labour_qty, sp_labour_id, sp_labour_optional_flag,sp_labour_group_seq, spkm_km_id, sp_labour_unit, km_value')
+    //                 ->where('sp_labour_spmc_id', $model_id)
+    //                 ->where('sp_labour_delete_flag', 0)
+    //                 ->join('sp_parts_master', 'sp_parts_master.sp_pm_id = sp_labour_lm_id', 'left')
+    //                 ->join('sp_item_master', 'sp_item_master.spim_id = sp_pm_spim_id', 'left')
+    //                 ->join(
+    //                     'sp_km_item_map',
+    //                     'sp_km_item_map.spkm_item_id = sp_labour_id AND sp_km_item_map.spkm_item_type = 1 AND sp_km_item_map.spkm_delete_flag = 0',
+    //                     'left'
+    //                 )
+    //                 ->join('kilometer_master', 'kilometer_master.km_id = spkm_km_id', 'left')
+    //                 ->findAll();
+
+    //             // Combine and group by km_id
+    //             $combinedByKm = [];
+
+    //             foreach ($spares as $spare) {
+    //                 if (!empty($spare['spkm_km_id'])) {
+    //                     $km_id = $spare['spkm_km_id'];
+    //                     $spare['item_type'] = 0;
+    //                     $combinedByKm[$km_id]['items'][] = $spare;
+    //                     $combinedByKm[$km_id]['km_value'] = $spare['km_value'];
+    //                 }
+    //             }
+
+    //             foreach ($labours as $labour) {
+    //                 if (!empty($labour['spkm_km_id'])) {
+    //                     $km_id = $labour['spkm_km_id'];
+    //                     $labour['item_type'] = 1;
+    //                     $combinedByKm[$km_id]['items'][] = $labour;
+    //                     $combinedByKm[$km_id]['km_value'] = $labour['km_value'];
+    //                 }
+    //             }
+
+    //             // Final structure
+    //             $final = [];
+    //             foreach ($combinedByKm as $km_id => $data) {
+    //                 $final[] = [
+    //                     'km_id' => $km_id,
+    //                     'km_value' => $data['km_value'] ?? '',
+    //                     'actual_price' => $kmPriceMapById[$km_id]['markup_price'] ?? 0,
+    //                     'display_price' => $kmPriceMapById[$km_id]['display_price'] ?? 0,
+    //                     'items' => $data['items'],
+    //                 ];
+    //             }
+    //         } else {
+    //             $final = [];
+    //         }
+
+
+    //         if (!empty($final)) {
+    //             $response = [
+    //                 'ret_data' => 'success',
+    //                 'servicePackage' => $final,
+    //                 'engineDetails' => $engineDetails,
+    //                 'labourFactor' => $labourFactor,
+    //                 'modelId' => $modelData['spmc_id'],
+    //                 'modelYearUsed' => $modelData['spmc_model_year'] ?? null, // Optional: show used year
+    //                 'Vin_No' => $modelData['spmc_vin_no'] ?? null, // Optional: show used Vin No
+    //             ];
+    //         } else if (!empty($modelData)) {
+    //             $response = [
+    //                 'ret_data' => 'success',
+    //                 'modelData' => $modelData,
+    //                 'modelYearUsed' => $modelData['spmc_model_year'] ?? null,
+    //                 'message' => 'Model found, but no service package items available.',
+    //                 'Vin_No' => $modelData['spmc_vin_no'] ?? null, // Optional: show used Vin No
+    //             ];
+    //         } else {
+    //             $response = [
+    //                 'ret_data' => 'fail',
+
+    //             ];
+    //         }
+    //         return $this->respond($response, 200);
+    //     }
+    // }
     public function getPartsForEngineNo()
     {
         $common = new Common();

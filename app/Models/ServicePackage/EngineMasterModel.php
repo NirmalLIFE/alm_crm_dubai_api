@@ -6,7 +6,7 @@ use CodeIgniter\Model;
 
 class EngineMasterModel extends Model
 {
-    protected $DBGroup          = 'default';
+    protected $DBGroup          = 'commonDB';
     protected $table            = 'engine_master';
     protected $primaryKey       = 'eng_id';
     protected $useAutoIncrement = true;

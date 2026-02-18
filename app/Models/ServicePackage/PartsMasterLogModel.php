@@ -4,17 +4,17 @@ namespace App\Models\ServicePackage;
 
 use CodeIgniter\Model;
 
-class ServicePackageLogModel extends Model
+class PartsMasterLogModel extends Model
 {
     protected $DBGroup          = 'commonDB';
-    protected $table            = 'sp_log_table';
-    protected $primaryKey       = 'sp_log_id';
+    protected $table            = 'part_master_log';
+    protected $primaryKey       = 'id';
     protected $useAutoIncrement = true;
     protected $insertID         = 0;
     protected $returnType       = 'array';
     protected $useSoftDeletes   = false;
     protected $protectFields    = true;
-    protected $allowedFields    = ['sp_log_id', 'sp_log_spmc_id', 'sp_log_notes', 'sp_log_created_by', 'sp_log_created_on', 'sp_log_delete_flag'];
+    protected $allowedFields    = ['pm_log_id', 'pm_log_pm_id', 'pm_log_notes', 'pm_log_created_by', 'pm_log_created_on', 'pm_log_branch', 'pm_log_delete_flag'];
 
     // Dates
     protected $useTimestamps = false;

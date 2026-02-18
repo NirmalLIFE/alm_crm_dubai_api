@@ -6,7 +6,7 @@ use CodeIgniter\Model;
 
 class ServicePackageKmPriceModel extends Model
 {
-    protected $DBGroup          = 'default';
+    protected $DBGroup          = 'commonDB';
     protected $table            = 'sp_km_price_map';
     protected $primaryKey       = 'spkmp_id';
     protected $useAutoIncrement = true;

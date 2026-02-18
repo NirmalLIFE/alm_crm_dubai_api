@@ -6,7 +6,7 @@ use CodeIgniter\Model;
 
 class ServicePackageKMItemMap extends Model
 {
-    protected $DBGroup          = 'default';
+    protected $DBGroup          = 'commonDB';
     protected $table            = 'sp_km_item_map';
     protected $primaryKey       = 'spkm_id ';
     protected $useAutoIncrement = true;

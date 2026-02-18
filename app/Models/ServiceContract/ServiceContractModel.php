@@ -1,20 +1,20 @@
 <?php
 
-namespace App\Models\ServicePackage;
+namespace App\Models\ServiceContract;
 
 use CodeIgniter\Model;
 
-class ServicePackageLogModel extends Model
+class ServiceContractModel extends Model
 {
-    protected $DBGroup          = 'commonDB';
-    protected $table            = 'sp_log_table';
-    protected $primaryKey       = 'sp_log_id';
+    protected $DBGroup          = 'default';
+    protected $table            = 'service_contract';
+    protected $primaryKey       = 'sc_id';
     protected $useAutoIncrement = true;
     protected $insertID         = 0;
     protected $returnType       = 'array';
     protected $useSoftDeletes   = false;
     protected $protectFields    = true;
-    protected $allowedFields    = ['sp_log_id', 'sp_log_spmc_id', 'sp_log_notes', 'sp_log_created_by', 'sp_log_created_on', 'sp_log_delete_flag'];
+    protected $allowedFields    = ['sc_id', 'sc_v_id', 'sc_contract_tier_id', 'sc_type', 'sc_cust_id', 'sc_valid_from', 'sc_valid_upto', 'sc_contract_duration', 'sc_contract_price', 'sc_created_on', 'sc_created_by', 'sc_updated_on', 'sc_updated_by', 'sc_delete_flag'];
 
     // Dates
     protected $useTimestamps = false;
