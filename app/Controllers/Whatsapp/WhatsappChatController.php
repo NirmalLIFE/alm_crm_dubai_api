@@ -179,6 +179,7 @@ class WhatsappChatController extends ResourceController
                         if ($row && !empty($row->off_days)) {
                             // Convert JSON to array of YYYY-MM-DD
                             $nonWorkingDates = json_decode($row->off_days, true);
+                            log_message('error', 'DB Row: ' . json_encode($row));
                         }
 
                         $currentDate = date('Y-m-d');
@@ -213,7 +214,7 @@ class WhatsappChatController extends ResourceController
                         // log_message('error', 'WorkshopDays: ' . print_r($workshopDays, true));
 
                         // Step 1: Non-working dates
-                        $nonWorkingDates = ['2025-06-05', '2025-06-06', '2025-06-07', '2025-06-08'];
+                        // $nonWorkingDates = ['2025-06-05', '2025-06-06', '2025-06-07', '2025-06-08'];
 
                         $currentDate     = date('Y-m-d');
                         $currentDayName  = date('l');

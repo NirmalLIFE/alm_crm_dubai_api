@@ -1242,4 +1242,515 @@ class SparePartsController extends ResourceController
             return $this->respond($response, 200);
         }
     }
+
+
+    public function getPartsPriceDetails()
+    {
+        $common = new Common();
+        $valid = new Validation();
+        $heddata = $this->request->headers();
+        $tokendata = $common->decode_jwt_token($valid->getbearertoken($heddata['Authorization']));
+
+        // 🔐 AUTH CHECK
+        if ($tokendata['aud'] == 'superadmin') {
+            $SuperModel = new SuperAdminModel();
+            if (!$SuperModel->where("s_adm_id", $tokendata['uid'])->first()) {
+                return $this->fail("invalid user", 400);
+            }
+        } elseif ($tokendata['aud'] == 'user') {
+            $usmodel = new UserModel();
+            if (!$usmodel->where("us_id", $tokendata['uid'])->first()) {
+                return $this->fail("invalid user", 400);
+            }
+        } else {
+            return $this->fail("Invalid user", 400);
+        }
+
+        if (!$tokendata) {
+            return $this->fail("Unauthorized", 401);
+        }
+
+        $pm_id = $this->request->getVar('pm_id');
+
+        if (!$pm_id) {
+            return $this->fail("pm_id is required", 400);
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | 1️⃣ Fetch Part Details (YOU REMOVED THIS EARLIER — RESTORE IT)
+        |--------------------------------------------------------------------------
+        */
+
+        $SparePartsMaster = new SparePartsMaster();
+
+        // 1️⃣ fetch requested part (unchanged) — keep this block you already restored
+        $requestedpart = $SparePartsMaster
+            ->select('parts_master.*, brand_list.brand_name, sp_item_master.spim_name')
+            ->where('parts_master.pm_id', $pm_id)
+            ->where('parts_master.pm_delete_flag', 0)
+            ->join('brand_list', 'brand_list.brand_id = pm_brand', 'left')
+            ->join(
+                'sp_parts_master',
+                'sp_parts_master.sp_pm_id = pm_sp_pm_id 
+         AND sp_parts_master.sp_pm_delete_flag = 0',
+                'left'
+            )
+            ->join(
+                'sp_item_master',
+                'sp_item_master.spim_id = sp_parts_master.sp_pm_spim_id 
+         AND sp_item_master.spim_delete_flag = 0',
+                'left'
+            )
+            ->first();
+
+        if (!$requestedpart) {
+            return $this->fail("Part not found", 404);
+        }
+
+        // 2️⃣ fetch models (same as before)
+        $models = $SparePartsMaster->getSpareModels($pm_id);
+
+        // Build grouped structure keyed by spare_id + model_id
+        $grouped = [];
+        foreach ($models as $model) {
+            $spareId = $model['sp_spare_id'];
+            $modelId = $model['sp_spare_spmc_id'];
+
+            // set spare-level data only once
+            if (!isset($grouped[$spareId])) {
+                $grouped[$spareId] = [
+                    'spare_id' => $spareId,
+                    'sp_spare_qty' => $model['sp_spare_qty'], // ✅ ADD THIS
+                    'models' => []
+                ];
+            }
+
+            $grouped[$spareId]['models'][$modelId] = [
+                'model_id' => $modelId,
+                'spmc_value' => $model['spmc_value'],
+                'spmc_vin_no' => $model['spmc_vin_no'],
+                'spmc_model_year' => $model['spmc_model_year'],
+                'spmc_variant' => $model['spmc_variant'],
+                'spmc_type' => $model['spmc_type'],
+                'kms' => []
+            ];
+        }
+
+
+        // 3️⃣ IMPORTANT CHANGE: fetch km prices that are actually mapped to each spare
+        $kmPrices = $SparePartsMaster->getKmPricesBySpares($pm_id);
+
+        // 4️⃣ Map km rows directly using spare_id and model_id (no nested *all spares* loop)
+        foreach ($kmPrices as $km) {
+            $spareId = $km['sp_spare_id'];         // comes from query
+            $modelId = $km['spkmp_spmc_id'];       // price mapped for this model
+            if (isset($grouped[$spareId]['models'][$modelId])) {
+                $grouped[$spareId]['models'][$modelId]['kms'][] = [
+                    'spkmp_id' => $km['spkmp_id'],
+                    'km_id' => $km['km_id'],
+                    'km_value' => $km['km_value'],
+                    'markup_price' => $km['spkmp_markup_price'],
+                    'display_price' => $km['spkmp_display_price']
+                ];
+            }
+        }
+
+        // 5️⃣ cleanup (same)
+        $finalData = [];
+        foreach ($grouped as $spare) {
+            $spare['models'] = array_values($spare['models']);
+            $finalData[] = $spare;
+        }
+
+        $requestedpart['pricing_details'] = $finalData;
+
+        /*
+            |--------------------------------------------------------------------------
+            | 5️⃣ Requested By User
+            |--------------------------------------------------------------------------
+            */
+
+        if (!empty($requestedpart['pm_price_requested_by'])) {
+
+            $user = $this->db
+                ->table('users')
+                ->select('us_firstname')
+                ->where('us_id', $requestedpart['pm_price_requested_by'])
+                ->get()
+                ->getRowArray();
+
+            $requestedpart['us_firstname'] = $user['us_firstname'] ?? null;
+        }
+
+        /*
+            |--------------------------------------------------------------------------
+            | 6️⃣ Final Response
+            |--------------------------------------------------------------------------
+            */
+
+        return $this->respond([
+            'ret_data' => 'success',
+            'requestedpart' => $requestedpart,
+        ], 200);
+    }
+
+
+
+    // public function getPartsPriceDetails()
+    // {
+    //     $common = new Common();
+    //     $valid = new Validation();
+    //     $heddata = $this->request->headers();
+    //     $tokendata = $common->decode_jwt_token($valid->getbearertoken($heddata['Authorization']));
+
+    //     // 🔐 AUTH CHECK
+    //     if ($tokendata['aud'] == 'superadmin') {
+    //         $SuperModel = new SuperAdminModel();
+    //         $super = $SuperModel->where("s_adm_id", $tokendata['uid'])->first();
+    //         if (!$super)
+    //             return $this->fail("invalid user", 400);
+    //     } else if ($tokendata['aud'] == 'user') {
+    //         $usmodel = new UserModel();
+    //         $user = $usmodel->where("us_id", $tokendata['uid'])->first();
+    //         if (!$user)
+    //             return $this->fail("invalid user", 400);
+    //     } else {
+    //         return $this->fail("Invalid user", 400);
+    //     }
+
+    //     if (!$tokendata) {
+    //         return $this->fail("Unauthorized", 401);
+    //     }
+
+    //     $pm_id = $this->request->getVar('pm_id');
+
+    //     if (!$pm_id) {
+    //         return $this->fail("pm_id is required", 400);
+    //     }
+
+
+
+    //     /*
+    //     |--------------------------------------------------------------------------
+    //     | 1️⃣ Fetch Part Details
+    //     |--------------------------------------------------------------------------
+    //     */
+    //     $SparePartsMaster = new SparePartsMaster();
+
+    //     $models = $SparePartsMaster->getSpareModels($pm_id);
+
+    //     $modelIds = array_column($models, 'sp_spare_spmc_id');
+
+    //     $kmPrices = $SparePartsMaster->getKmPricesByModels($modelIds);;
+
+
+
+    //     $grouped = [];
+
+    //     foreach ($models as $model) {
+
+    //         $grouped[$model['sp_spare_id']]['spare_id'] = $model['sp_spare_id'];
+
+    //         $grouped[$model['sp_spare_id']]['models'][$model['sp_spare_spmc_id']] = [
+    //             'model_id' => $model['sp_spare_spmc_id'],
+    //             'spmc_value' => $model['spmc_value'],
+    //             'spmc_vin_no' => $model['spmc_vin_no'],
+    //             'spmc_model_year' => $model['spmc_model_year'],
+    //             'spmc_variant' => $model['spmc_variant'],
+    //             'spmc_type' => $model['spmc_type'],
+    //             'kms' => []
+    //         ];
+    //     }
+
+    //     foreach ($kmPrices as $km) {
+
+    //         foreach ($grouped as &$spare) {
+
+    //             if (isset($spare['models'][$km['spkmp_spmc_id']])) {
+
+    //                 $spare['models'][$km['spkmp_spmc_id']]['kms'][] = [
+    //                     'spkmp_id' => $km['spkmp_id'],
+    //                     'km_id' => $km['km_id'],
+    //                     'km_value' => $km['km_value'],
+    //                     'markup_price' => $km['spkmp_markup_price'],
+    //                     'display_price' => $km['spkmp_display_price']
+    //                 ];
+    //             }
+    //         }
+    //     }
+
+
+
+    //     // $requestedpart = $SparePartsMaster
+    //     //     ->select('parts_master.*, brand_list.brand_name, sp_item_master.spim_name')
+    //     //     ->where('parts_master.pm_id', $pm_id)
+    //     //     ->where('parts_master.pm_delete_flag', 0)
+    //     //     ->join('brand_list', 'brand_list.brand_id = pm_brand', 'left')
+    //     //     ->join(
+    //     //         'sp_parts_master',
+    //     //         'sp_parts_master.sp_pm_id = pm_sp_pm_id 
+    //     //      AND sp_parts_master.sp_pm_delete_flag = 0
+    //     //      AND sp_parts_master.sp_pm_category IN (0,1)',
+    //     //         'left'
+    //     //     )
+    //     //     ->join(
+    //     //         'sp_item_master',
+    //     //         'sp_item_master.spim_id = sp_parts_master.sp_pm_spim_id 
+    //     //      AND sp_item_master.spim_delete_flag = 0',
+    //     //         'left'
+    //     //     )
+    //     //     ->first();
+
+    //     // if (!$requestedpart) {
+    //     //     return $this->fail("Part not found", 404);
+    //     // }
+
+    //     // /*
+    //     // |--------------------------------------------------------------------------
+    //     // | 2️⃣ Fetch Spare → Model → KM Pricing
+    //     // |--------------------------------------------------------------------------
+    //     // */
+
+    //     // $kmPrices = $this->dbCommon->table('sp_spares')
+    //     //     ->select('
+    //     //     sp_spares.sp_spare_id,
+    //     //     sp_spares.sp_spare_spmc_id,
+
+    //     //     sp_model_code.spmc_value,
+    //     //     sp_model_code.spmc_vin_no,
+    //     //     sp_model_code.spmc_model_year,
+    //     //     sp_model_code.spmc_variant,
+    //     //     sp_model_code.spmc_type,
+
+    //     //     kilometer_master.km_id,
+    //     //     kilometer_master.km_value,
+
+    //     //     sp_km_price_map.spkmp_id,
+    //     //     sp_km_price_map.spkmp_markup_price,
+    //     //     sp_km_price_map.spkmp_display_price
+    //     // ')
+    //     //     ->where('sp_spares.sp_spare_pm_id', $pm_id)
+    //     //     ->where('sp_spares.sp_spare_delete_flag', 0)
+
+    //     //     // 🔥 INNER JOIN → Deleted models excluded automatically
+    //     //     ->join(
+    //     //         'sp_model_code',
+    //     //         'sp_model_code.spmc_id = sp_spares.sp_spare_spmc_id 
+    //     //      AND sp_model_code.spmc_delete_flag = 0',
+    //     //         'inner'
+    //     //     )
+
+    //     //     // 🔥 INNER JOIN → Only valid KM mappings
+    //     //     ->join(
+    //     //         'sp_km_item_map',
+    //     //         'sp_km_item_map.spkm_item_id = sp_spares.sp_spare_id 
+    //     //      AND sp_km_item_map.spkm_item_type = 0
+    //     //      AND sp_km_item_map.spkm_delete_flag = 0',
+    //     //         'inner'
+    //     //     )
+
+    //     //     // 🔥 INNER JOIN → Only valid price mappings
+    //     //     ->join(
+    //     //         'sp_km_price_map',
+    //     //         'sp_km_price_map.spkmp_spkm_id = sp_km_item_map.spkm_km_id 
+    //     //      AND sp_km_price_map.spkmp_spmc_id = sp_spares.sp_spare_spmc_id
+    //     //      AND sp_km_price_map.spkmp_delete_flag = 0',
+    //     //         'inner'
+    //     //     )
+
+    //     //     // 🔥 INNER JOIN → Only active kilometer records
+    //     //     ->join(
+    //     //         'kilometer_master',
+    //     //         'kilometer_master.km_id = sp_km_item_map.spkm_km_id 
+    //     //      AND kilometer_master.km_delete_flag = 0',
+    //     //         'inner'
+    //     //     )
+
+    //     //     ->get()
+    //     //     ->getResultArray();
+
+    //     // /*
+    //     // |--------------------------------------------------------------------------
+    //     // | 3️⃣ Convert To Structured Response
+    //     // |--------------------------------------------------------------------------
+    //     // */
+
+    //     // $groupedData = [];
+
+    //     // foreach ($kmPrices as $row) {
+
+    //     //     $spareId = $row['sp_spare_id'];
+    //     //     $modelId = $row['sp_spare_spmc_id'];
+
+    //     //     if (!isset($groupedData[$spareId])) {
+    //     //         $groupedData[$spareId] = [
+    //     //             'spare_id' => $spareId,
+    //     //             'models' => []
+    //     //         ];
+    //     //     }
+
+    //     //     if (!isset($groupedData[$spareId]['models'][$modelId])) {
+    //     //         $groupedData[$spareId]['models'][$modelId] = [
+    //     //             'model_id' => $modelId,
+    //     //             'spmc_value' => $row['spmc_value'],
+    //     //             'spmc_vin_no' => $row['spmc_vin_no'],
+    //     //             'spmc_model_year' => $row['spmc_model_year'],
+    //     //             'spmc_variant' => $row['spmc_variant'],
+    //     //             'spmc_type' => $row['spmc_type'],
+    //     //             'kms' => []
+    //     //         ];
+    //     //     }
+
+    //     //     $groupedData[$spareId]['models'][$modelId]['kms'][] = [
+    //     //         'spkmp_id' => $row['spkmp_id'],
+    //     //         'km_id' => $row['km_id'],
+    //     //         'km_value' => $row['km_value'],
+    //     //         'markup_price' => $row['spkmp_markup_price'],
+    //     //         'display_price' => $row['spkmp_display_price']
+    //     //     ];
+    //     // }
+
+    //     // /*
+    //     // |--------------------------------------------------------------------------
+    //     // | 4️⃣ Remove Associative Keys + Remove Empty Models
+    //     // |--------------------------------------------------------------------------
+    //     // */
+
+    //     // $finalData = [];
+
+    //     // foreach ($groupedData as $spare) {
+
+    //     //     $spare['models'] = array_values($spare['models']);
+
+    //     //     // 🔥 Only include spare if it has valid models
+    //     //     if (!empty($spare['models'])) {
+    //     //         $finalData[] = $spare;
+    //     //     }
+    //     // }
+
+    //     // $requestedpart['pricing_details'] = $finalData;
+
+    //     // /*
+    //     // |--------------------------------------------------------------------------
+    //     // | 5️⃣ Requested By User Name
+    //     // |--------------------------------------------------------------------------
+    //     // */
+
+    //     // if (!empty($requestedpart['pm_price_requested_by'])) {
+
+    //     //     $user = $this->db
+    //     //         ->table('users')
+    //     //         ->select('us_firstname')
+    //     //         ->where('us_id', $requestedpart['pm_price_requested_by'])
+    //     //         ->get()
+    //     //         ->getRowArray();
+
+    //     //     $requestedpart['us_firstname'] = $user['us_firstname'] ?? null;
+    //     // }
+
+    //     /*
+    //     |--------------------------------------------------------------------------
+    //     | 6️⃣ Final Response
+    //     |--------------------------------------------------------------------------
+    //     */
+
+    //     return $this->respond([
+    //         'ret_data' => 'success',
+    //         'requestedpart' => $requestedpart,
+    //     ], 200);
+    // }
+
+
+    public function updateSelectedPrices()
+    {
+        $common = new Common();
+        $valid = new Validation();
+        $heddata = $this->request->headers();
+        $tokendata = $common->decode_jwt_token($valid->getbearertoken($heddata['Authorization']));
+
+        if ($tokendata['aud'] == 'superadmin') {
+            $SuperModel = new SuperAdminModel();
+            $super = $SuperModel->where("s_adm_id", $tokendata['uid'])->first();
+            if (!$super)
+                return $this->fail("invalid user", 400);
+        } else if ($tokendata['aud'] == 'user') {
+            $usmodel = new UserModel();
+            $user = $usmodel->where("us_id", $tokendata['uid'])->first();
+            if (!$user)
+                return $this->fail("invalid user", 400);
+        } else {
+            $data['ret_data'] = "Invalid user";
+            return $this->fail($data, 400);
+        }
+        if ($tokendata) {
+
+            $this->dbCommon->transStart();
+
+            try {
+
+                $partsMaster = new SparePartsMaster();
+                $spSpares    = new ServicePackageKmPriceModel();
+
+                $pm_id        = $this->request->getVar('pm_id');
+                $pm_new_price = $this->request->getVar('pm_new_price');
+                $updated_kms = $this->request->getJSON(true)['updated_kms'] ?? [];
+
+
+                // 🔎 Basic Validation
+                if (empty($pm_id) || !is_numeric($pm_new_price) || empty($updated_kms)) {
+                    return $this->response->setJSON([
+                        'ret_data' => 'error',
+                        'message'  => 'Invalid input data'
+                    ]);
+                }
+
+                // 🔥 Update parts_master
+                if (!$partsMaster->update($pm_id, [
+                    'pm_price'       => $pm_new_price,
+                    'pm_new_price'   => '',
+                    'pm_updated_on'  => date('Y-m-d H:i:s'),
+                    'pm_updated_by'  => $tokendata['uid']
+                ])) {
+                    throw new \Exception('Failed to update part price');
+                }
+
+                // 🔥 Update all KM rows
+                foreach ($updated_kms as $km) {
+
+                    if (!isset($km['spkmp_id'])) {
+                        throw new \Exception('Missing spkmp_id');
+                    }
+
+                    if (!$spSpares->update($km['spkmp_id'], [
+                        'spkmp_display_price'  => $km['new_display_price'],
+                        'spkmp_markup_price'   => $km['new_markup_price'],
+                        'sp_spare_updated_on'  => date('Y-m-d H:i:s'),
+                        'sp_spare_updated_by'  => $tokendata['uid']
+                    ])) {
+                        throw new \Exception('Failed to update KM pricing');
+                    }
+                }
+
+                $this->dbCommon->transComplete();
+
+                if ($this->dbCommon->transStatus() === false) {
+                    throw new \Exception('Transaction failed');
+                }
+
+                return $this->response->setJSON([
+                    'ret_data' => 'success',
+                    'message'  => 'Prices updated successfully'
+                ]);
+            } catch (\Exception $e) {
+
+                $this->dbCommon->transRollback();
+
+                return $this->response->setJSON([
+                    'ret_data' => 'error',
+                    'message'  => $e->getMessage()
+                ]);
+            }
+        }
+    }
 }

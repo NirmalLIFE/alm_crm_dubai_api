@@ -531,6 +531,8 @@ $routes->post("deleteServiceContractTier", "ServiceContract/ServiceContractContr
 $routes->get('getServiceContractCustomers', 'ServiceContract/ServiceContractController::getServiceContractCustomers', ['filter' => 'authFilter']);
 $routes->post("getVehicleDetailsByVinNo", "ServiceContract/ServiceContractController::getVehicleDetailsByVinNo", ['filter' => 'authFilter']);
 $routes->post("getPartsLog", "SpareParts/SparePartsController::getPartsLog", ['filter' => 'authFilter']);
+$routes->post("getPartsPriceDetails", "SpareParts/SparePartsController::getPartsPriceDetails", ['filter' => 'authFilter']);
+$routes->post("updateSelectedPrices", "SpareParts/SparePartsController::updateSelectedPrices", ['filter' => 'authFilter']);
 
 
 

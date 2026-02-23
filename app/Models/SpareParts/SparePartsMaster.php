@@ -64,4 +64,80 @@ class SparePartsMaster extends Model
             'price_diff' => $price_diff,
         ];
     }
+
+
+    public function getSpareModels($pm_id)
+    {
+        return $this->db->query("
+        SELECT 
+            s.sp_spare_id,
+            s.sp_spare_spmc_id,
+            m.spmc_value,
+            m.spmc_vin_no,
+            m.spmc_model_year,
+            m.spmc_variant,
+            m.spmc_type,
+            s.sp_spare_qty
+        FROM sp_spares s
+        INNER JOIN sp_model_code m 
+            ON m.spmc_id = s.sp_spare_spmc_id
+            AND m.spmc_delete_flag = 0
+        WHERE s.sp_spare_pm_id = ?
+        AND s.sp_spare_delete_flag = 0
+    ", [$pm_id])->getResultArray();
+    }
+
+    public function getKmPricesByModels($modelIds)
+    {
+        if (empty($modelIds)) return [];
+
+        $ids = implode(',', array_map('intval', $modelIds));
+
+        return $this->db->query("
+        SELECT 
+            p.spkmp_id,
+            p.spkmp_spmc_id,
+            k.km_id,
+            k.km_value,
+            p.spkmp_markup_price,
+            p.spkmp_display_price
+        FROM sp_km_price_map p
+        INNER JOIN kilometer_master k 
+            ON k.km_id = p.spkmp_spkm_id
+            AND k.km_delete_flag = 0
+        WHERE p.spkmp_spmc_id IN ($ids)
+        AND p.spkmp_delete_flag = 0
+    ")->getResultArray();
+    }
+
+
+    public function getKmPricesBySpares($pm_id)
+    {
+        // parameterized query to avoid injection; pm_id applied as binding
+        return $this->db->query("
+        SELECT 
+            s.sp_spare_id,
+            s.sp_spare_spmc_id,
+            p.spkmp_id,
+            p.spkmp_spmc_id,
+            k.km_id,
+            k.km_value,
+            p.spkmp_markup_price,
+            p.spkmp_display_price
+        FROM sp_spares s
+        INNER JOIN sp_km_item_map im 
+            ON im.spkm_item_id = s.sp_spare_id 
+            AND im.spkm_item_type = 0
+            AND im.spkm_delete_flag = 0
+        INNER JOIN sp_km_price_map p
+            ON p.spkmp_spkm_id = im.spkm_km_id
+            AND p.spkmp_spmc_id = s.sp_spare_spmc_id
+            AND p.spkmp_delete_flag = 0
+        INNER JOIN kilometer_master k
+            ON k.km_id = im.spkm_km_id
+            AND k.km_delete_flag = 0
+        WHERE s.sp_spare_pm_id = ?
+        AND s.sp_spare_delete_flag = 0
+    ", [$pm_id])->getResultArray();
+    }
 }
